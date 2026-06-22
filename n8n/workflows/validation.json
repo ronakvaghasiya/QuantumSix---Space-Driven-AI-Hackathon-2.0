@@ -1,0 +1,33 @@
+{
+  "name": "validation-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "validation",
+        "responseMode": "onReceived"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/v1/pipeline/validation",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "taskId", "value": "={{ $json.body.taskId }}" }
+          ]
+        }
+      },
+      "name": "Run Validation Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Run Validation Pipeline", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sdlc-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Powered Autonomous SDLC Platform",
+  "scripts": {
+    "dev": "bash scripts/kill-dev-ports.sh && concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:all": "npm run dev:infra && npm run dev",
+    "dev:local": "bash scripts/start-infra-local.sh && npm run dev",
+    "setup:local": "bash scripts/setup-local.sh",
+    "dev:n8n": "bash scripts/start-n8n-local.sh",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:infra": "docker-compose up -d",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

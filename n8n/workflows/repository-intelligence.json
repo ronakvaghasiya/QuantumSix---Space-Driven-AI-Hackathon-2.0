@@ -1,0 +1,81 @@
+{
+  "name": "repository-intelligence-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "repository-intelligence",
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "webhookId": "repository-intelligence"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "Extract 5-10 search keywords from this software requirement. Return ONLY a JSON array of strings.\n\nRequirement: {{ $json.body.requirement }}"
+            }
+          ]
+        }
+      },
+      "name": "Generate Search Keywords",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/v1/repository/intelligence",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "projectId", "value": "={{ $json.body.projectId }}" },
+            { "name": "requirement", "value": "={{ $json.body.requirement }}" },
+            { "name": "taskId", "value": "={{ $json.body.taskId }}" }
+          ]
+        }
+      },
+      "name": "Search Repository",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/v1/webhooks/n8n/analysis-complete",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "taskId", "value": "={{ $('Webhook').item.json.body.taskId }}" },
+            { "name": "impactedFiles", "value": "={{ $json.relevantFiles.map(f => ({ path: f.file, confidence: f.confidence })) }}" },
+            { "name": "dependencyGraph", "value": "={{ $json.adjacencyList }}" },
+            { "name": "keywords", "value": "={{ $json.keywords }}" }
+          ]
+        }
+      },
+      "name": "Store Analysis Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Generate Search Keywords", "type": "main", "index": 0 }]] },
+    "Generate Search Keywords": { "main": [[{ "node": "Search Repository", "type": "main", "index": 0 }]] },
+    "Search Repository": { "main": [[{ "node": "Store Analysis Results", "type": "main", "index": 0 }]] },
+    "Store Analysis Results": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}

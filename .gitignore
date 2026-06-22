@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.local/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+
+# Repos cloned for indexing
+repos/
+/tmp/sdlc-repos/
+
+# Misc
+*.tsbuildinfo
+.turbo/

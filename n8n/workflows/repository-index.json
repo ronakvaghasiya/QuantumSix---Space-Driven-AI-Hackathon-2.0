@@ -1,0 +1,45 @@
+{
+  "name": "repository-index-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "repository-index",
+        "responseMode": "onReceived"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "git clone --branch {{ $json.body.branch }} --single-branch --depth 1 {{ $json.body.repositoryUrl }} /tmp/repos/{{ $json.body.projectId }}"
+      },
+      "name": "Clone Repository",
+      "type": "n8n-nodes-base.executeCommand",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "command": "find /tmp/repos/{{ $json.body.projectId }} -type f \\( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' \\) | head -1000"
+      },
+      "name": "Scan Files",
+      "type": "n8n-nodes-base.executeCommand",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:6333/collections/repository_knowledge/points",
+        "method": "PUT"
+      },
+      "name": "Store Embeddings in Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Clone Repository", "type": "main", "index": 0 }]] },
+    "Clone Repository": { "main": [[{ "node": "Scan Files", "type": "main", "index": 0 }]] },
+    "Scan Files": { "main": [[{ "node": "Store Embeddings in Qdrant", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2021",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "noEmit": true,
+    "baseUrl": "./backend",
+    "paths": {
+      "*": ["src/*"]
+    }
+  },
+  "include": ["backend/src/**/*.ts"],
+  "exclude": ["node_modules", "backend/dist", "frontend", "backend/node_modules"]
+}

@@ -1,0 +1,16 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['@mui/material', '@mui/icons-material'],
+  async rewrites() {
+    const backend = process.env.BACKEND_URL || 'http://localhost:3001';
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backend}/api/v1/:path*`,
+      },
+    ];
+  },
+};
+
+module.exports = nextConfig;

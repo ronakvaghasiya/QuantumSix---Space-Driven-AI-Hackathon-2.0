@@ -1,0 +1,33 @@
+{
+  "name": "task-created-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "task-created",
+        "responseMode": "onReceived"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/v1/pipeline/analyze",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "taskId", "value": "={{ $json.body.taskId }}" }
+          ]
+        }
+      },
+      "name": "Run Analysis Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Run Analysis Pipeline", "type": "main", "index": 0 }]] }
+  }
+}

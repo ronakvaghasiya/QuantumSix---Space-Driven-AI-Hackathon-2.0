@@ -1,0 +1,8 @@
+task_id,requirement
+BB-14342,Fix upload artwork preview not showing after user selects image in design tool
+BB-14343,Fix canvas synchronization issue when switching between mobile and desktop view
+BB-14219,Fix save design regression when editing cart item quantity
+BB-14401,Add validation error message when user uploads unsupported file format
+BB-14415,Improve product image loading performance on category listing page
+BB-14420,Fix checkout button disabled state after applying discount coupon
+DT-1000,Please rename the **"Add New Text Field"** button to **"Add Text on Canvas"**.
