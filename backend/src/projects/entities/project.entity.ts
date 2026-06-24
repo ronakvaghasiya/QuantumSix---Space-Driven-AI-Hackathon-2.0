@@ -5,8 +5,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Task } from '../../tasks/entities/task.entity';
 import { ProjectStatus, Framework, Language } from '../../common/enums/project.enum';
@@ -14,19 +12,14 @@ import { AiProvider } from '../../common/enums/ai.enum';
 import { RepositoryFile } from '../../repository/entities/repository-file.entity';
 import { DependencyEdge } from '../../repository/entities/dependency-edge.entity';
 import { IndexingJob } from '../../repository/entities/indexing-job.entity';
-import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'organization_id', nullable: true })
+  @Column({ name: 'organization_id', type: 'uuid', nullable: true })
   organizationId: string | null;
-
-  @ManyToOne(() => Organization, (org) => org.projects, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'organization_id' })
-  organization: Organization;
 
   @Column()
   name: string;

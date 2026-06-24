@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
@@ -8,9 +8,6 @@ import { SettingsService } from '../../settings/settings.service';
 import { ProjectAiService } from '../../ai/project-ai.service';
 import { OPENAI_EMBEDDING_MODEL } from '../../settings/embedding-config';
 import { huggingFaceEmbeddings } from './huggingface-embedding';
-import { UsageMeterService } from '../../usage/services/usage-meter.service';
-import { UsageMetricType } from '../../common/enums/usage.enum';
-
 export const EMBEDDING_BATCH_SIZE = 20;
 export const HF_EMBEDDING_BATCH_SIZE = 2;
 export const TASK_MEMORY_COLLECTION = 'task_memory';
@@ -45,7 +42,6 @@ export class EmbeddingService {
     private readonly config: ConfigService,
     private readonly settingsService: SettingsService,
     private readonly projectAi: ProjectAiService,
-    @Optional() private readonly usageMeter?: UsageMeterService,
   ) {
     this.qdrant = new QdrantClient({
       url: config.get('QDRANT_URL', 'http://localhost:6333'),
@@ -128,9 +124,7 @@ export class EmbeddingService {
           'Hugging Face token not configured. Add your hf_... token in Settings.',
         );
       }
-      const vectors = await huggingFaceEmbeddings(texts, token, runtime.model);
-      await this.recordEmbeddingUsage(projectId, texts, 'huggingface');
-      return vectors;
+      return huggingFaceEmbeddings(texts, token, runtime.model);
     }
 
     const openai = await this.openaiClient();
@@ -138,33 +132,7 @@ export class EmbeddingService {
       model: OPENAI_EMBEDDING_MODEL,
       input: texts,
     });
-    const tokens =
-      response.usage?.total_tokens ||
-      texts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0);
-    await this.usageMeter?.recordForProject(
-      projectId,
-      UsageMetricType.EMBEDDING_TOKENS,
-      tokens,
-      { metadata: { model: OPENAI_EMBEDDING_MODEL, batchSize: texts.length } },
-    );
     return response.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
-  }
-
-  private async recordEmbeddingUsage(
-    projectId: string,
-    texts: string[],
-    provider: string,
-  ): Promise<void> {
-    await this.usageMeter?.recordForProject(projectId, UsageMetricType.HF_REQUESTS, 1, {
-      metadata: { provider, batchSize: texts.length },
-    });
-    const estimated = texts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0);
-    await this.usageMeter?.recordForProject(
-      projectId,
-      UsageMetricType.EMBEDDING_TOKENS,
-      estimated,
-      { metadata: { provider, estimated: true } },
-    );
   }
 
   async embedAndStore(

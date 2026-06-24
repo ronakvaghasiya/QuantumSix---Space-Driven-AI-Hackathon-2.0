@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TasksController } from './tasks.controller';
 import { TasksRecentController } from './tasks-recent.controller';
@@ -30,15 +30,6 @@ import { SecurityModule } from '../security/security.module';
 import { SettingsModule } from '../settings/settings.module';
 import { MemoryModule } from '../memory/memory.module';
 import { RiskModule } from '../risk/risk.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
-import { RbacModule } from '../rbac/rbac.module';
-import { BillingModule } from '../billing/billing.module';
-import { UsageModule } from '../usage/usage.module';
-import { NotificationModule } from '../notifications/notification.module';
-import { AiReviewerModule } from '../ai-reviewer/ai-reviewer.module';
-import { ReleasesModule } from '../releases/releases.module';
-import { WorkflowConfigModule } from '../workflow-config/workflow-config.module';
-import { PluginsModule } from '../plugins/plugins.module';
 import { Project } from '../projects/entities/project.entity';
 
 @Module({
@@ -66,15 +57,6 @@ import { Project } from '../projects/entities/project.entity';
     SettingsModule,
     MemoryModule,
     RiskModule,
-    OrganizationsModule,
-    RbacModule,
-    BillingModule,
-    UsageModule,
-    NotificationModule,
-    forwardRef(() => AiReviewerModule),
-    forwardRef(() => ReleasesModule),
-    WorkflowConfigModule,
-    PluginsModule,
   ],
   controllers: [TasksRecentController, TasksController, PipelineController],
   providers: [

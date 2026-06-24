@@ -5,9 +5,6 @@ import { Project } from './entities/project.entity';
 import { CreateProjectDto, UpdateProjectDto, ConnectProjectDto } from './dto/project.dto';
 import { ProjectStatus } from '../common/enums/project.enum';
 import { IndexingService } from '../repository/services/indexing.service';
-import { OrganizationsService } from '../organizations/organizations.service';
-import { BillingService } from '../billing/services/billing.service';
-import { QuotaMetric } from '../common/enums/usage.enum';
 
 @Injectable()
 export class ProjectsService {
@@ -15,27 +12,21 @@ export class ProjectsService {
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
     private readonly indexingService: IndexingService,
-    private readonly orgs: OrganizationsService,
-    private readonly billing: BillingService,
   ) {}
 
-  async findAll(organizationId: string): Promise<Project[]> {
-    return this.projectRepo.find({
-      where: { organizationId },
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(): Promise<Project[]> {
+    return this.projectRepo.find({ order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: string, organizationId: string): Promise<Project> {
-    return this.orgs.assertProjectInOrg(id, organizationId);
+  async findOne(id: string): Promise<Project> {
+    const project = await this.projectRepo.findOne({ where: { id } });
+    if (!project) throw new NotFoundException(`Project ${id} not found`);
+    return project;
   }
 
-  async create(dto: CreateProjectDto, organizationId: string): Promise<Project> {
-    await this.billing.assertQuota(organizationId, QuotaMetric.PROJECTS);
-
+  async create(dto: CreateProjectDto): Promise<Project> {
     const project = this.projectRepo.create({
       ...dto,
-      organizationId,
       defaultBranch: dto.defaultBranch || 'main',
       status: ProjectStatus.PENDING,
       githubRepoId: dto.githubRepoId || null,
@@ -45,23 +36,19 @@ export class ProjectsService {
     return this.projectRepo.save(project);
   }
 
-  async update(id: string, dto: UpdateProjectDto, organizationId: string): Promise<Project> {
-    const project = await this.findOne(id, organizationId);
+  async update(id: string, dto: UpdateProjectDto): Promise<Project> {
+    const project = await this.findOne(id);
     Object.assign(project, dto);
     return this.projectRepo.save(project);
   }
 
-  async remove(id: string, organizationId: string): Promise<void> {
-    const project = await this.findOne(id, organizationId);
+  async remove(id: string): Promise<void> {
+    const project = await this.findOne(id);
     await this.projectRepo.remove(project);
   }
 
-  async connectRepository(
-    id: string,
-    organizationId: string,
-    dto?: ConnectProjectDto,
-  ): Promise<Project> {
-    const project = await this.findOne(id, organizationId);
+  async connectRepository(id: string, dto?: ConnectProjectDto): Promise<Project> {
+    const project = await this.findOne(id);
 
     if (dto) {
       if (dto.repositoryUrl) project.repositoryUrl = dto.repositoryUrl;
@@ -73,21 +60,20 @@ export class ProjectsService {
     }
 
     await this.indexingService.startIndexing(id);
-    return this.findOne(id, organizationId);
+    return this.findOne(id);
   }
 
-  async reindexRepository(id: string, organizationId: string): Promise<Project> {
-    await this.orgs.assertProjectInOrg(id, organizationId);
+  async reindexRepository(id: string): Promise<Project> {
     await this.indexingService.startIndexing(id);
-    return this.findOne(id, organizationId);
+    return this.findOne(id);
   }
 
-  async syncRepository(id: string, organizationId: string): Promise<Project> {
-    return this.reindexRepository(id, organizationId);
+  async syncRepository(id: string): Promise<Project> {
+    return this.reindexRepository(id);
   }
 
-  async getIndexingStatus(id: string, organizationId: string) {
-    const project = await this.findOne(id, organizationId);
+  async getIndexingStatus(id: string) {
+    const project = await this.findOne(id);
     const job = await this.indexingService.getIndexingStatus(id);
     return {
       project: {

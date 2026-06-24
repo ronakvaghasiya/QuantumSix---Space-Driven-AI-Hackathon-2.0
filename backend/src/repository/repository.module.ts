@@ -11,11 +11,9 @@ import { RepositoryFile } from './entities/repository-file.entity';
 import { DependencyEdge } from './entities/dependency-edge.entity';
 import { IndexingJob } from './entities/indexing-job.entity';
 import { GitLabModule } from '../gitlab/gitlab.module';
-
 import { AiModule } from '../ai/ai.module';
 import { SettingsModule } from '../settings/settings.module';
 import { MemoryModule } from '../memory/memory.module';
-import { UsageModule } from '../usage/usage.module';
 
 @Module({
   imports: [
@@ -28,7 +26,6 @@ import { UsageModule } from '../usage/usage.module';
     GitLabModule,
     AiModule,
     SettingsModule,
-    UsageModule,
     forwardRef(() => MemoryModule),
   ],
   controllers: [RepositoryController],

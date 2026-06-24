@@ -29,7 +29,6 @@ import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, formatDate } from '@/lib/
 import Link from 'next/link';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { MemorySnapshotsCard } from '@/components/repository/MemorySnapshotsCard';
-import { ReleasesPanel } from '@/components/projects/ReleasesPanel';
 import type { MemorySnapshot, ReindexEvent } from '@/lib/api';
 
 export default function ProjectDetailPage() {
@@ -280,7 +279,6 @@ export default function ProjectDetailPage() {
             />
           )}
 
-          <ReleasesPanel projectId={id} />
         </Grid>
 
         <Grid item xs={12} md={4}>

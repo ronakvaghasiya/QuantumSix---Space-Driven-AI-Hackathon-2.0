@@ -82,7 +82,15 @@ export class GitLabService implements OnModuleInit {
   }
 
   private defaultBaseUrl(): string {
-    return this.config.get('GITLAB_BASE_URL', 'https://gitlab.com').replace(/\/$/, '');
+    return this.normalizeBaseUrl(this.config.get('GITLAB_BASE_URL', 'https://gitlab.com'));
+  }
+
+  private normalizeBaseUrl(url: string): string {
+    let normalized = url.trim().replace(/\/$/, '');
+    if (!/^https?:\/\//i.test(normalized)) {
+      normalized = `https://${normalized}`;
+    }
+    return normalized;
   }
 
   private apiUrl(baseUrl: string, path: string): string {
@@ -187,14 +195,70 @@ export class GitLabService implements OnModuleInit {
     );
   }
 
+  private sanitizePat(raw: string): string {
+    const cleaned = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+    const patPattern =
+      /(glpat-[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}|glptt-[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,})/i;
+    const direct = cleaned.match(patPattern);
+    if (direct) return direct[1];
+
+    const afterEquals = cleaned.match(/=\s*([^\s#]+)/);
+    if (afterEquals) {
+      return afterEquals[1].replace(/^['"]|['"]$/g, '').trim();
+    }
+
+    return cleaned.replace(/^['"]|['"]$/g, '').trim();
+  }
+
+  private assertPatFormat(token: string): void {
+    if (!token.startsWith('glpat-') && !token.startsWith('glptt-')) {
+      throw new BadRequestException(
+        'Token must start with glpat-. Copy the value only (not GITLAB_TOKEN=), or use "Connect using .env token".',
+      );
+    }
+    const segments = token.replace(/^(glpat-|glptt-)/, '').split('.');
+    if (segments.length < 3) {
+      throw new BadRequestException(
+        'Token looks incomplete. GitLab tokens have 3 parts like glpat-XXXX.01.YYYY — copy the entire token including .01.xxxxx at the end.',
+      );
+    }
+    if (token.length < 50) {
+      throw new BadRequestException(
+        'Token is too short. Triple-click the GITLAB_TOKEN line in .env and copy all of it, or use "Connect using .env token".',
+      );
+    }
+  }
+
   async savePat(dto: SaveGitLabPatDto): Promise<GitLabConnection> {
-    const baseUrl = (dto.baseUrl || this.defaultBaseUrl()).replace(/\/$/, '');
+    const token = this.sanitizePat(dto.token || '');
+    if (!token) {
+      throw new BadRequestException('GitLab token is required');
+    }
+    this.assertPatFormat(token);
+
+    const baseUrl = this.normalizeBaseUrl(dto.baseUrl || this.defaultBaseUrl());
 
     let user: GitLabUser;
     try {
-      user = await this.gitlabFetch<GitLabUser>(baseUrl, '/user', dto.token);
-    } catch {
-      throw new BadRequestException('Invalid GitLab token or base URL');
+      user = await this.gitlabFetch<GitLabUser>(baseUrl, '/user', token);
+    } catch (err) {
+      if (err instanceof BadRequestException) {
+        const message = err.message;
+        if (message.includes('401')) {
+          throw new BadRequestException(
+            'GitLab rejected the token (401). The token may be incomplete (missing .01.xxxxx suffix), revoked, or missing api/read_repository scopes. Use "Connect using .env token" or triple-click the full GITLAB_TOKEN line to copy.',
+          );
+        }
+        if (message.includes('403')) {
+          throw new BadRequestException(
+            'GitLab token lacks permission (403). Enable api and read_repository scopes on the token.',
+          );
+        }
+        throw err;
+      }
+      throw new BadRequestException(
+        `Could not reach GitLab at ${baseUrl}. Check the base URL and your network connection.`,
+      );
     }
 
     await this.connectionRepo.update({ isActive: true }, { isActive: false });
@@ -202,7 +266,7 @@ export class GitLabService implements OnModuleInit {
     return this.connectionRepo.save(
       this.connectionRepo.create({
         authType: VcsAuthType.PAT,
-        accessToken: dto.token,
+        accessToken: token,
         gitlabUsername: user.username,
         gitlabUserId: String(user.id),
         gitlabBaseUrl: baseUrl,
@@ -221,6 +285,7 @@ export class GitLabService implements OnModuleInit {
     username: string | null;
     baseUrl: string | null;
     oauthConfigured: boolean;
+    envTokenConfigured: boolean;
   }> {
     const conn = await this.getActiveConnection();
     return {
@@ -229,7 +294,21 @@ export class GitLabService implements OnModuleInit {
       username: conn?.gitlabUsername || null,
       baseUrl: conn?.gitlabBaseUrl || this.defaultBaseUrl(),
       oauthConfigured: this.isOAuthConfigured(),
+      envTokenConfigured: !!this.config.get<string>('GITLAB_TOKEN')?.trim(),
     };
+  }
+
+  async syncFromEnv(): Promise<GitLabConnection> {
+    const envToken = this.config.get<string>('GITLAB_TOKEN')?.trim();
+    if (!envToken) {
+      throw new BadRequestException(
+        'GITLAB_TOKEN is not set in .env. Add your glpat-... token and restart the backend.',
+      );
+    }
+    return this.savePat({
+      token: envToken,
+      baseUrl: this.defaultBaseUrl(),
+    });
   }
 
   private async getToken(): Promise<{ token: string; baseUrl: string }> {

@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -33,12 +33,6 @@ import { CodeContextService } from './code-context.service';
 import { ValidationRunnerService } from './validation-runner.service';
 import { QaTestService } from './qa-test.service';
 import { ValidationDetails } from '../types/validation.types';
-import { NotificationService } from '../../notifications/notification.service';
-import { NotificationEventType } from '../../notifications/enums/notification.enum';
-import { AiReviewerService } from '../../ai-reviewer/ai-reviewer.service';
-import { WorkflowConfigService } from '../../workflow-config/workflow-config.service';
-import { PluginLoaderService } from '../../plugins/plugin-loader.service';
-import { PluginHook } from '../../plugins/plugin.types';
 
 interface RequirementAnalysisResult {
   acceptanceCriteria: string;
@@ -90,10 +84,6 @@ export class TaskPipelineService {
     private readonly riskEngine: RiskEngineService,
     private readonly taskMemory: TaskMemoryService,
     private readonly repoMemory: RepositoryMemoryService,
-    @Optional() private readonly notifications?: NotificationService,
-    @Optional() private readonly aiReviewer?: AiReviewerService,
-    @Optional() private readonly workflowConfig?: WorkflowConfigService,
-    @Optional() private readonly plugins?: PluginLoaderService,
   ) {}
 
   async markAnalysisApproved(taskId: string): Promise<void> {
@@ -239,63 +229,21 @@ export class TaskPipelineService {
 
       await this.setStep(taskId, TimelineStep.TEST_GENERATION, TimelineStepStatus.COMPLETED);
 
-      const riskAssessment = await this.riskEngine.assessTask(taskId);
-      const orgId = task.project?.organizationId;
+      await this.riskEngine.assessTask(taskId);
 
-      if (orgId && this.plugins) {
-        const pluginResults = await this.plugins.runHook(orgId, PluginHook.POST_ANALYSIS, {
-          taskId,
-          projectId: task.projectId,
-        });
-        for (const r of pluginResults) {
-          if (r.status !== 'ok') {
-            await this.audit.log('task', taskId, 'plugin_hook', { result: r }, 'plugin', orgId);
-          }
-        }
-      }
-
-      const needsAnalysisApproval =
-        !orgId ||
-        (await this.workflowConfig?.requiresAnalysisApproval(orgId, riskAssessment.overallScore) ??
-          true);
-
-      if (needsAnalysisApproval) {
-        await this.taskRepo.update(taskId, {
-          ...taskFields,
-          status: TaskStatus.ANALYSIS_APPROVAL_REQUIRED,
-        });
-        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
-        await this.notifications
-          ?.notifyTask(taskId, NotificationEventType.ANALYSIS_READY)
-          .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
-      } else {
-        await this.taskRepo.update(taskId, {
-          ...taskFields,
-          status: TaskStatus.GENERATING_CODE,
-        });
-        await this.markAnalysisApproved(taskId);
-        await this.audit.log(
-          'task',
-          taskId,
-          'analysis_auto_approved',
-          { reason: 'workflow_config' },
-          'system',
-          orgId,
-        );
-        setImmediate(() => {
-          this.runCodeGeneration(taskId).catch((err) =>
-            this.logger.error(`Auto code generation failed for ${taskId}: ${(err as Error).message}`),
-          );
-        });
-      }
+      await this.taskRepo.update(taskId, {
+        ...taskFields,
+        status: TaskStatus.ANALYSIS_APPROVAL_REQUIRED,
+      });
+      await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
 
       await this.audit.log('task', taskId, 'similar_tasks_found', {
         count: similar.length,
         tasks: similar.map((s) => s.taskId),
-      }, 'system', orgId);
+      });
       await this.audit.log('task', taskId, 'analysis_completed', {
         testCases: qaResult.qaTestCases?.length || 0,
-      }, 'system', orgId);
+      });
       this.logger.log(`Analysis + QA test cases complete for task ${taskId}`);
     } catch (error) {
       const message = (error as Error).message || 'Analysis failed';
@@ -407,57 +355,12 @@ Rules: Real code only. Implementation MUST satisfy approved test cases. No markd
 
       await this.setStep(taskId, TimelineStep.CODE_GENERATION, TimelineStepStatus.COMPLETED);
 
-      await this.aiReviewer
-        ?.reviewTask(taskId)
-        .catch((err) => this.logger.warn(`AI review failed: ${(err as Error).message}`));
-
-      const orgId = task.project?.organizationId;
-      if (orgId && this.plugins) {
-        await this.plugins.runHook(orgId, PluginHook.POST_CODE_GENERATION, {
-          taskId,
-          projectId: task.projectId,
-        });
-      }
-
-      const needsCodeApproval =
-        !orgId || (await this.workflowConfig?.requiresCodeApproval(orgId) ?? true);
-
-      if (needsCodeApproval) {
-        await this.taskRepo.update(taskId, { status: TaskStatus.CODE_APPROVAL_REQUIRED });
-        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
-        await this.notifications
-          ?.notifyTask(taskId, NotificationEventType.CODE_READY)
-          .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
-      } else {
-        const latestDiff = await this.codeDiffRepo.findOne({
-          where: { taskId },
-          order: { createdAt: 'DESC' },
-        });
-        if (latestDiff) {
-          latestDiff.approvalStatus = 'approved';
-          await this.codeDiffRepo.save(latestDiff);
-        }
-        await this.markAnalysisApproved(taskId);
-        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.COMPLETED);
-        await this.taskRepo.update(taskId, { status: TaskStatus.VALIDATING });
-        await this.audit.log(
-          'task',
-          taskId,
-          'code_auto_approved',
-          { reason: 'workflow_config' },
-          'system',
-          orgId,
-        );
-        setImmediate(() => {
-          this.runValidation(taskId).catch((err) =>
-            this.logger.error(`Auto validation failed for ${taskId}: ${(err as Error).message}`),
-          );
-        });
-      }
+      await this.taskRepo.update(taskId, { status: TaskStatus.CODE_APPROVAL_REQUIRED });
+      await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
 
       await this.audit.log('task', taskId, 'code_generation_completed', {
         files: fileEdits.map((e) => e.path),
-      }, 'system', orgId);
+      });
       this.logger.log(`Code generation complete for task ${taskId}`);
     } catch (error) {
       const message = (error as Error).message || 'Code generation failed';
@@ -548,28 +451,8 @@ Rules: Real code only. Implementation MUST satisfy approved test cases. No markd
         }),
       );
 
-      const orgId = task.project?.organizationId;
-      const validationRules = orgId
-        ? await this.workflowConfig?.getValidationRules(orgId)
-        : null;
-
-      if (
-        validationRules?.blockOnLintFail !== false &&
-        details.eslint.status === 'fail'
-      ) {
-        throw new Error('Lint validation failed (workflow rule)');
-      }
-
-      if (orgId && this.plugins) {
-        const pluginResults = await this.plugins.runHook(orgId, PluginHook.POST_VALIDATION, {
-          taskId,
-          projectId: task.projectId,
-          payload: { regressionCoverage: tests?.regressionCoverage || 0 },
-        });
-        const failed = pluginResults.filter((r) => r.status === 'fail');
-        if (failed.length) {
-          throw new Error(`Plugin validation failed: ${failed.map((f) => f.message).join('; ')}`);
-        }
+      if (details.eslint.status === 'fail') {
+        throw new Error('Lint validation failed');
       }
 
       await this.setStep(taskId, TimelineStep.QA, TimelineStepStatus.COMPLETED);
@@ -594,11 +477,7 @@ Rules: Real code only. Implementation MUST satisfy approved test cases. No markd
           summary: scanResult.summary,
         });
         if (scanResult.blockedPr) {
-          const blockSecurity = validationRules?.blockOnSecurityScan !== false;
-          if (blockSecurity) {
-            throw new Error(`Security scan blocked PR creation: ${scanResult.summary}`);
-          }
-          this.logger.warn(`Security scan blocked PR but workflow allows continue for ${taskId}`);
+          throw new Error(`Security scan blocked PR creation: ${scanResult.summary}`);
         }
       }
 
@@ -637,28 +516,10 @@ Rules: Real code only. Implementation MUST satisfy approved test cases. No markd
         prUrl: pr.prUrl,
         prNumber: pr.prNumber,
       });
-      await this.notifications
-        ?.notifyTask(taskId, NotificationEventType.PR_CREATED, {
-          prUrl: pr.prUrl || undefined,
-          prNumber: pr.prNumber || undefined,
-        })
-        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
-      await this.notifications
-        ?.notifyTask(taskId, NotificationEventType.MR_READY, {
-          prUrl: pr.prUrl || undefined,
-          prNumber: pr.prNumber || undefined,
-        })
-        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
       this.logger.log(`Validation + PR complete for task ${taskId}`);
     } catch (error) {
       const message = (error as Error).message;
       this.logger.error(`Validation failed for ${taskId}: ${message}`);
-      const isSecurity = message.includes('Security scan blocked');
-      await this.notifications
-        ?.notifyTask(taskId, isSecurity ? NotificationEventType.SECURITY_SCAN_FAILED : NotificationEventType.VALIDATION_FAILED, {
-          errorMessage: message,
-        })
-        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
       await this.taskRepo.update(taskId, { status: TaskStatus.FAILED });
       await this.taskMemory.indexTask(taskId, 'failed').catch(() => undefined);
       await this.failRunningSteps(taskId, message);

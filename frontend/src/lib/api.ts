@@ -1,7 +1,5 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
-import { authHeaders } from './auth';
-
 function parseApiError(body: string, status: number): string {
   if (body.trimStart().startsWith('<!DOCTYPE') || body.trimStart().startsWith('<html')) {
     return `Backend not reachable (HTTP ${status}). Start the API: cd backend && npm run start:dev`;
@@ -19,7 +17,7 @@ function parseApiError(body: string, status: number): string {
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
   });
   if (!res.ok) {
@@ -31,46 +29,6 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  auth: {
-    config: () => fetchApi<{ authEnabled: boolean }>('/auth/config'),
-    register: (data: RegisterInput) =>
-      fetchApi<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-    login: (data: LoginInput) =>
-      fetchApi<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-    me: () => fetchApi<AuthProfile>('/auth/me'),
-    switchOrganization: (organizationId: string) =>
-      fetchApi<AuthResponse>('/auth/switch-organization', {
-        method: 'POST',
-        body: JSON.stringify({ organizationId }),
-      }),
-  },
-  organizations: {
-    list: () => fetchApi<OrganizationSummary[]>('/organizations'),
-    current: () => fetchApi<OrganizationSummary>('/organizations/current'),
-    members: () => fetchApi<OrganizationMember[]>('/organizations/current/members'),
-    invite: (data: InviteMemberInput) =>
-      fetchApi('/organizations/current/members', { method: 'POST', body: JSON.stringify(data) }),
-    updateMemberRole: (memberId: string, role: string) =>
-      fetchApi(`/organizations/current/members/${memberId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ role }),
-      }),
-  },
-  billing: {
-    subscription: () => fetchApi<BillingSubscription>('/billing/subscription'),
-    usage: () => fetchApi<UsageMetricRow>('/billing/usage'),
-    quota: () => fetchApi<BillingQuotaSummary>('/billing/quota'),
-    projectedCost: () => fetchApi<ProjectedCost>('/billing/projected-cost'),
-    upgrade: (planCode: string) =>
-      fetchApi<BillingSubscription>('/billing/upgrade', {
-        method: 'POST',
-        body: JSON.stringify({ planCode }),
-      }),
-  },
-  usage: {
-    current: () => fetchApi<UsageMetricRow>('/usage/current'),
-    history: (months = 6) => fetchApi<UsageMetricRow[]>(`/usage/history?months=${months}`),
-  },
   projects: {
     list: () => fetchApi<Project[]>('/projects'),
     get: (id: string) => fetchApi<Project>(`/projects/${id}`),
@@ -97,6 +55,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ token, baseUrl }),
       }),
+    syncFromEnv: () => fetchApi('/gitlab/sync-env', { method: 'POST' }),
     disconnect: () => fetchApi('/gitlab/disconnect', { method: 'DELETE' }),
     repos: (page = 1) => fetchApi<GitLabRepo[]>(`/gitlab/repos?page=${page}`),
     branches: (projectId: number) =>
@@ -197,95 +156,6 @@ export const api = {
       fetchApi<TaskDetail>(`/tasks/${id}/pr/merge`, { method: 'POST' }),
     closePr: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/pr/close`, { method: 'POST' }),
-    aiReview: (id: string) => fetchApi<AiReview | null>(`/tasks/${id}/ai-review`),
-    regenerateAiReview: (id: string) =>
-      fetchApi<AiReview>(`/tasks/${id}/ai-review/regenerate`, { method: 'POST' }),
-  },
-  notifications: {
-    channels: () => fetchApi<NotificationChannel[]>('/notifications/channels'),
-    createChannel: (data: CreateNotificationChannelInput) =>
-      fetchApi<NotificationChannel>('/notifications/channels', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    updateChannel: (id: string, data: Partial<CreateNotificationChannelInput>) =>
-      fetchApi<NotificationChannel>(`/notifications/channels/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
-    deleteChannel: (id: string) =>
-      fetchApi<{ ok: boolean }>(`/notifications/channels/${id}`, { method: 'DELETE' }),
-    deliveries: () => fetchApi<NotificationDelivery[]>('/notifications/deliveries'),
-  },
-  analytics: {
-    engineering: () => fetchApi<EngineeringDashboard>('/analytics/engineering'),
-    riskTrends: (days = 30) => fetchApi<RiskTrendPoint[]>(`/analytics/risk-trends?days=${days}`),
-    repositoryHealth: () => fetchApi<RepositoryHealthItem[]>('/analytics/repository-health'),
-  },
-  releases: {
-    list: (limit = 20) => fetchApi<Release[]>(`/releases?limit=${limit}`),
-    byProject: (projectId: string) => fetchApi<Release[]>(`/releases/projects/${projectId}`),
-    get: (id: string) => fetchApi<Release>(`/releases/${id}`),
-  },
-  vault: {
-    list: () => fetchApi<VaultSecretSummary[]>('/vault/secrets'),
-    upsert: (keyName: string, value: string) =>
-      fetchApi<VaultSecretSummary>('/vault/secrets', {
-        method: 'POST',
-        body: JSON.stringify({ keyName, value }),
-      }),
-    delete: (keyName: string) =>
-      fetchApi<{ ok: boolean }>(`/vault/secrets/${encodeURIComponent(keyName)}`, { method: 'DELETE' }),
-  },
-  sessions: {
-    list: () => fetchApi<UserSession[]>('/sessions'),
-    revoke: (id: string) => fetchApi<{ ok: boolean }>(`/sessions/${id}`, { method: 'DELETE' }),
-    revokeOthers: () => fetchApi<{ revoked: number }>('/sessions/revoke-others', { method: 'POST' }),
-  },
-  sso: {
-    providers: () => fetchApi<SsoProviderSummary[]>('/sso/providers'),
-    upsert: (data: UpsertSsoProviderInput) =>
-      fetchApi<SsoProviderSummary>('/sso/providers', { method: 'POST', body: JSON.stringify(data) }),
-    publicProviders: (orgSlug: string) =>
-      fetchApi<SsoProviderSummary[]>(`/sso/public/${orgSlug}`),
-    authorizeUrl: (providerId: string, orgSlug: string) =>
-      `${API_BASE}/sso/authorize?providerId=${providerId}&orgSlug=${encodeURIComponent(orgSlug)}`,
-  },
-  security: {
-    ipAllowlist: () => fetchApi<IpAllowlistRule[]>('/security/ip-allowlist'),
-    addIp: (cidr: string, label?: string) =>
-      fetchApi<IpAllowlistRule>('/security/ip-allowlist', {
-        method: 'POST',
-        body: JSON.stringify({ cidr, label }),
-      }),
-    removeIp: (id: string) =>
-      fetchApi<{ ok: boolean }>(`/security/ip-allowlist/${id}`, { method: 'DELETE' }),
-    accessLogs: () => fetchApi<RepositoryAccessLogEntry[]>('/security/repository-access-logs'),
-  },
-  audit: {
-    logs: (limit = 200) => fetchApi<AuditLogEntry[]>('/audit/logs?limit=' + limit),
-    exportCsvUrl: (days = 90) => `${API_BASE}/audit/export?days=${days}`,
-  },
-  workflow: {
-    get: () => fetchApi<WorkflowConfig>('/workflow-config'),
-    update: (data: Partial<WorkflowConfigUpdate>) =>
-      fetchApi<WorkflowConfig>('/workflow-config', { method: 'PUT', body: JSON.stringify(data) }),
-  },
-  plugins: {
-    catalog: () => fetchApi<PluginCatalogItem[]>('/plugins/catalog'),
-    installed: () => fetchApi<PluginInstallation[]>('/plugins/installed'),
-    install: (pluginId: string, config?: Record<string, unknown>) =>
-      fetchApi<PluginInstallation>('/plugins/install', {
-        method: 'POST',
-        body: JSON.stringify({ pluginId, config }),
-      }),
-    setEnabled: (pluginId: string, enabled: boolean) =>
-      fetchApi<PluginInstallation>(`/plugins/installed/${pluginId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ enabled }),
-      }),
-    uninstall: (pluginId: string) =>
-      fetchApi<{ ok: boolean }>(`/plugins/installed/${pluginId}/uninstall`, { method: 'POST' }),
   },
   reports: {
     dashboard: () => fetchApi<DashboardStats>('/reports/dashboard'),
@@ -374,6 +244,7 @@ export interface GitLabStatus {
   username: string | null;
   baseUrl: string | null;
   oauthConfigured: boolean;
+  envTokenConfigured?: boolean;
 }
 
 export interface OpenAiKeyStatus {

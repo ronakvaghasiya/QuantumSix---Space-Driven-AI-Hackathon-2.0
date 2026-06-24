@@ -39,7 +39,6 @@ import { RejectModal } from '@/components/tasks/RejectModal';
 import { AuditTab } from '@/components/tasks/AuditTab';
 import { MrActionButtons, prStatusColor } from '@/components/tasks/MrActionButtons';
 import { SimilarTasksPanel, RiskBreakdownCard } from '@/components/tasks/IntelligencePanels';
-import { AiReviewPanel } from '@/components/tasks/AiReviewPanel';
 import { api, TaskDetail, RepositoryIntelligenceResult, SimilarTaskResult, RiskAssessment } from '@/lib/api';
 import { TIMELINE_LABELS, formatDate, PROJECT_STATUS_LABELS, agentLabel } from '@/lib/utils';
 import { DependencyGraphView } from '@/components/repository/DependencyGraphView';
@@ -521,9 +520,6 @@ export default function TaskDetailPage() {
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>MR Actions</Typography>
                   <MrActionButtons taskId={id} reviewStatus={pr.reviewStatus} size="medium" onUpdated={load} />
-                </Grid>
-                <Grid item xs={12}>
-                  <AiReviewPanel taskId={id} />
                 </Grid>
               </Grid>
             ) : (

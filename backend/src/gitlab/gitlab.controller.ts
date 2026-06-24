@@ -47,6 +47,12 @@ export class GitLabController {
     return this.gitlabService.savePat(dto);
   }
 
+  @Post('sync-env')
+  @ApiOperation({ summary: 'Connect GitLab using GITLAB_TOKEN from .env' })
+  syncFromEnv() {
+    return this.gitlabService.syncFromEnv();
+  }
+
   @Delete('disconnect')
   @ApiOperation({ summary: 'Disconnect GitLab' })
   async disconnect() {

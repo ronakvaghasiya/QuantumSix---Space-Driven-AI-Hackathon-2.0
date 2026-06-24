@@ -14,8 +14,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import simpleGit from 'simple-git';
 import { RepositoryMemoryService } from '../../memory/services/repository-memory.service';
-import { UsageMeterService } from '../../usage/services/usage-meter.service';
-import { UsageMetricType } from '../../common/enums/usage.enum';
 
 export interface IncrementalIndexOptions {
   changedFiles?: string[];
@@ -43,7 +41,6 @@ export class IndexingService implements OnModuleInit {
     @Optional()
     @Inject(forwardRef(() => RepositoryMemoryService))
     private readonly repoMemory?: RepositoryMemoryService,
-    @Optional() private readonly usageMeter?: UsageMeterService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -388,15 +385,6 @@ export class IndexingService implements OnModuleInit {
       });
 
       await this.updateJob(jobId, IndexingJobStatus.COMPLETED, 100, 'Repository ready');
-      if (project.organizationId) {
-        const storageEstimate = parsedFiles.length * 50_000;
-        await this.usageMeter?.record({
-          organizationId: project.organizationId,
-          projectId: project.id,
-          metricType: UsageMetricType.STORAGE_BYTES,
-          quantity: storageEstimate,
-        });
-      }
       this.logger.log(`Indexed ${parsedFiles.length} files for project ${project.name}`);
     } catch (err) {
       const message = (err as Error).message;
