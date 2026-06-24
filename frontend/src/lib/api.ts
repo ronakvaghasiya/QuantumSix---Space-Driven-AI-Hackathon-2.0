@@ -1,5 +1,7 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
+import { authHeaders } from './auth';
+
 function parseApiError(body: string, status: number): string {
   if (body.trimStart().startsWith('<!DOCTYPE') || body.trimStart().startsWith('<html')) {
     return `Backend not reachable (HTTP ${status}). Start the API: cd backend && npm run start:dev`;
@@ -17,7 +19,7 @@ function parseApiError(body: string, status: number): string {
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options?.headers },
     ...options,
   });
   if (!res.ok) {
@@ -29,6 +31,46 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    config: () => fetchApi<{ authEnabled: boolean }>('/auth/config'),
+    register: (data: RegisterInput) =>
+      fetchApi<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    login: (data: LoginInput) =>
+      fetchApi<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    me: () => fetchApi<AuthProfile>('/auth/me'),
+    switchOrganization: (organizationId: string) =>
+      fetchApi<AuthResponse>('/auth/switch-organization', {
+        method: 'POST',
+        body: JSON.stringify({ organizationId }),
+      }),
+  },
+  organizations: {
+    list: () => fetchApi<OrganizationSummary[]>('/organizations'),
+    current: () => fetchApi<OrganizationSummary>('/organizations/current'),
+    members: () => fetchApi<OrganizationMember[]>('/organizations/current/members'),
+    invite: (data: InviteMemberInput) =>
+      fetchApi('/organizations/current/members', { method: 'POST', body: JSON.stringify(data) }),
+    updateMemberRole: (memberId: string, role: string) =>
+      fetchApi(`/organizations/current/members/${memberId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ role }),
+      }),
+  },
+  billing: {
+    subscription: () => fetchApi<BillingSubscription>('/billing/subscription'),
+    usage: () => fetchApi<UsageMetricRow>('/billing/usage'),
+    quota: () => fetchApi<BillingQuotaSummary>('/billing/quota'),
+    projectedCost: () => fetchApi<ProjectedCost>('/billing/projected-cost'),
+    upgrade: (planCode: string) =>
+      fetchApi<BillingSubscription>('/billing/upgrade', {
+        method: 'POST',
+        body: JSON.stringify({ planCode }),
+      }),
+  },
+  usage: {
+    current: () => fetchApi<UsageMetricRow>('/usage/current'),
+    history: (months = 6) => fetchApi<UsageMetricRow[]>(`/usage/history?months=${months}`),
+  },
   projects: {
     list: () => fetchApi<Project[]>('/projects'),
     get: (id: string) => fetchApi<Project>(`/projects/${id}`),
@@ -100,6 +142,32 @@ export const api = {
     startIndexing: (projectId: string) =>
       fetchApi(`/repository/${projectId}/index`, { method: 'POST' }),
   },
+  memory: {
+    snapshots: (projectId: string) =>
+      fetchApi<MemorySnapshot[]>(`/memory/projects/${projectId}/snapshots`),
+    retrieve: (projectId: string, requirement: string, limit = 8) =>
+      fetchApi<MemoryRetrieveResult>('/memory/retrieve', {
+        method: 'POST',
+        body: JSON.stringify({ projectId, requirement, limit }),
+      }),
+    taskMemories: (projectId: string) =>
+      fetchApi<TaskMemoryEntry[]>(`/memory/projects/${projectId}/tasks`),
+    similarForTask: (taskId: string, limit = 5) =>
+      fetchApi<SimilarTaskResult[]>(`/memory/tasks/${taskId}/similar?limit=${limit}`),
+    reindexEvents: (projectId: string) =>
+      fetchApi<ReindexEvent[]>(`/memory/projects/${projectId}/reindex-events`),
+  },
+  risk: {
+    get: (taskId: string) => fetchApi<RiskAssessment | null>(`/risk/tasks/${taskId}`),
+    assess: (taskId: string) =>
+      fetchApi<RiskAssessment>(`/risk/tasks/${taskId}/assess`, { method: 'POST' }),
+    projectSummary: (projectId: string) =>
+      fetchApi<ProjectRiskSummary>(`/risk/projects/${projectId}/summary`),
+  },
+  knowledgeGraph: {
+    get: (projectId: string) =>
+      fetchApi<KnowledgeGraphResult>(`/knowledge-graph/projects/${projectId}`),
+  },
   tasks: {
     list: (projectId?: string) =>
       fetchApi<Task[]>(`/tasks${projectId ? `?projectId=${projectId}` : ''}`),
@@ -109,24 +177,115 @@ export const api = {
     upload: (data: { projectId: string; csvContent: string }) =>
       fetchApi<Task[]>('/tasks/upload', { method: 'POST', body: JSON.stringify(data) }),
     recent: (limit = 5) => fetchApi<Task[]>(`/tasks/recent?limit=${limit}`),
-    approveAnalysis: (id: string, action: string, comment?: string) =>
+    approveAnalysis: (id: string, action: string, comment?: string, reason?: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/approve-analysis`, {
         method: 'POST',
-        body: JSON.stringify({ action, comment }),
+        body: JSON.stringify({ action, comment, reason }),
       }),
     fixLint: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/fix-lint`, { method: 'POST' }),
-    approveCode: (id: string, action: string, comment?: string) =>
+    approveCode: (id: string, action: string, comment?: string, reason?: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/approve-code`, {
         method: 'POST',
-        body: JSON.stringify({ action, comment }),
+        body: JSON.stringify({ action, comment, reason }),
       }),
+    audit: (id: string) => fetchApi<AuditLogEntry[]>(`/tasks/${id}/audit`),
+    feedback: (id: string) => fetchApi<TaskFeedbackEntry[]>(`/tasks/${id}/feedback`),
     approvePr: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/pr/approve`, { method: 'POST' }),
     mergePr: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/pr/merge`, { method: 'POST' }),
     closePr: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/pr/close`, { method: 'POST' }),
+    aiReview: (id: string) => fetchApi<AiReview | null>(`/tasks/${id}/ai-review`),
+    regenerateAiReview: (id: string) =>
+      fetchApi<AiReview>(`/tasks/${id}/ai-review/regenerate`, { method: 'POST' }),
+  },
+  notifications: {
+    channels: () => fetchApi<NotificationChannel[]>('/notifications/channels'),
+    createChannel: (data: CreateNotificationChannelInput) =>
+      fetchApi<NotificationChannel>('/notifications/channels', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateChannel: (id: string, data: Partial<CreateNotificationChannelInput>) =>
+      fetchApi<NotificationChannel>(`/notifications/channels/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteChannel: (id: string) =>
+      fetchApi<{ ok: boolean }>(`/notifications/channels/${id}`, { method: 'DELETE' }),
+    deliveries: () => fetchApi<NotificationDelivery[]>('/notifications/deliveries'),
+  },
+  analytics: {
+    engineering: () => fetchApi<EngineeringDashboard>('/analytics/engineering'),
+    riskTrends: (days = 30) => fetchApi<RiskTrendPoint[]>(`/analytics/risk-trends?days=${days}`),
+    repositoryHealth: () => fetchApi<RepositoryHealthItem[]>('/analytics/repository-health'),
+  },
+  releases: {
+    list: (limit = 20) => fetchApi<Release[]>(`/releases?limit=${limit}`),
+    byProject: (projectId: string) => fetchApi<Release[]>(`/releases/projects/${projectId}`),
+    get: (id: string) => fetchApi<Release>(`/releases/${id}`),
+  },
+  vault: {
+    list: () => fetchApi<VaultSecretSummary[]>('/vault/secrets'),
+    upsert: (keyName: string, value: string) =>
+      fetchApi<VaultSecretSummary>('/vault/secrets', {
+        method: 'POST',
+        body: JSON.stringify({ keyName, value }),
+      }),
+    delete: (keyName: string) =>
+      fetchApi<{ ok: boolean }>(`/vault/secrets/${encodeURIComponent(keyName)}`, { method: 'DELETE' }),
+  },
+  sessions: {
+    list: () => fetchApi<UserSession[]>('/sessions'),
+    revoke: (id: string) => fetchApi<{ ok: boolean }>(`/sessions/${id}`, { method: 'DELETE' }),
+    revokeOthers: () => fetchApi<{ revoked: number }>('/sessions/revoke-others', { method: 'POST' }),
+  },
+  sso: {
+    providers: () => fetchApi<SsoProviderSummary[]>('/sso/providers'),
+    upsert: (data: UpsertSsoProviderInput) =>
+      fetchApi<SsoProviderSummary>('/sso/providers', { method: 'POST', body: JSON.stringify(data) }),
+    publicProviders: (orgSlug: string) =>
+      fetchApi<SsoProviderSummary[]>(`/sso/public/${orgSlug}`),
+    authorizeUrl: (providerId: string, orgSlug: string) =>
+      `${API_BASE}/sso/authorize?providerId=${providerId}&orgSlug=${encodeURIComponent(orgSlug)}`,
+  },
+  security: {
+    ipAllowlist: () => fetchApi<IpAllowlistRule[]>('/security/ip-allowlist'),
+    addIp: (cidr: string, label?: string) =>
+      fetchApi<IpAllowlistRule>('/security/ip-allowlist', {
+        method: 'POST',
+        body: JSON.stringify({ cidr, label }),
+      }),
+    removeIp: (id: string) =>
+      fetchApi<{ ok: boolean }>(`/security/ip-allowlist/${id}`, { method: 'DELETE' }),
+    accessLogs: () => fetchApi<RepositoryAccessLogEntry[]>('/security/repository-access-logs'),
+  },
+  audit: {
+    logs: (limit = 200) => fetchApi<AuditLogEntry[]>('/audit/logs?limit=' + limit),
+    exportCsvUrl: (days = 90) => `${API_BASE}/audit/export?days=${days}`,
+  },
+  workflow: {
+    get: () => fetchApi<WorkflowConfig>('/workflow-config'),
+    update: (data: Partial<WorkflowConfigUpdate>) =>
+      fetchApi<WorkflowConfig>('/workflow-config', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  plugins: {
+    catalog: () => fetchApi<PluginCatalogItem[]>('/plugins/catalog'),
+    installed: () => fetchApi<PluginInstallation[]>('/plugins/installed'),
+    install: (pluginId: string, config?: Record<string, unknown>) =>
+      fetchApi<PluginInstallation>('/plugins/install', {
+        method: 'POST',
+        body: JSON.stringify({ pluginId, config }),
+      }),
+    setEnabled: (pluginId: string, enabled: boolean) =>
+      fetchApi<PluginInstallation>(`/plugins/installed/${pluginId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled }),
+      }),
+    uninstall: (pluginId: string) =>
+      fetchApi<{ ok: boolean }>(`/plugins/installed/${pluginId}/uninstall`, { method: 'POST' }),
   },
   reports: {
     dashboard: () => fetchApi<DashboardStats>('/reports/dashboard'),
@@ -150,6 +309,14 @@ export interface Project {
   githubRepoId: string | null;
   githubOwner: string | null;
   githubRepoName: string | null;
+  aiProvider?: string;
+  aiModel?: string | null;
+  aiTemperature?: number;
+  aiMaxTokens?: number;
+  vcsProvider?: string;
+  lastCommitSha?: string | null;
+  autoReindexEnabled?: boolean;
+  lastReindexAt?: string | null;
   lastScanAt: string | null;
   createdAt: string;
 }
@@ -164,6 +331,12 @@ export interface CreateProjectInput {
   githubRepoId?: string;
   githubOwner?: string;
   githubRepoName?: string;
+  aiProvider?: 'openai' | 'huggingface';
+  aiModel?: string;
+  aiTemperature?: number;
+  aiMaxTokens?: number;
+  vcsProvider?: string;
+  autoReindexEnabled?: boolean;
 }
 
 export interface ConnectProjectInput {
@@ -318,12 +491,50 @@ export interface AnalysisEntry {
   apiDependencies: string[];
 }
 
+export interface AuditLogEntry {
+  id: string;
+  entityType: string;
+  entityId: string;
+  actor: string;
+  action: string;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface TaskFeedbackEntry {
+  id: string;
+  gate: string;
+  action: string;
+  reason: string | null;
+  comments: string | null;
+  createdAt: string;
+}
+
+export interface QaTestCaseEntry {
+  id: string;
+  title: string;
+  category: string;
+  priority: string;
+  preconditions: string;
+  steps: string[];
+  expectedResult: string;
+  actualResult?: string;
+  status: string;
+  relatedFiles?: string[];
+  linkedRequirement?: string;
+  verificationMethod?: string;
+}
+
 export interface TestEntry {
   functionalTests: { name: string; passed: boolean }[];
   edgeCases: string[];
   regressionCases: string[];
   playwrightSpecs: { filename: string; content: string }[];
   regressionCoverage: number;
+  qaTestCases?: QaTestCaseEntry[] | null;
+  qaSummary?: string | null;
+  qaVerifiedAt?: string | null;
+  qaGeneratedAt?: string | null;
 }
 
 export interface CodeDiffEntry {
@@ -459,3 +670,423 @@ export interface AnalyticsData {
     createdAt: string;
   }[];
 }
+
+export interface MemorySnapshot {
+  id: string;
+  projectId: string;
+  commitSha: string | null;
+  branch: string | null;
+  filesCount: number;
+  chunksCount: number;
+  summary: string | null;
+  metadata?: { incremental?: boolean; full?: boolean; trigger?: string };
+  createdAt: string;
+}
+
+export interface MemoryRetrieveResult {
+  snapshots: MemorySnapshot[];
+  semanticMatches: { filePath: string; score: number; chunkText: string }[];
+}
+
+export interface TaskMemoryEntry {
+  id: string;
+  taskId: string;
+  requirement: string;
+  outcome: string;
+  riskLevel: string | null;
+  impactedFiles: string[];
+  createdAt: string;
+}
+
+export interface SimilarTaskResult {
+  taskId: string;
+  taskDisplayId?: string;
+  requirement: string;
+  outcome: string;
+  riskLevel: string | null;
+  score: number;
+  similarity: number;
+  impactedFiles: string[];
+}
+
+export interface ReindexEvent {
+  id: string;
+  projectId: string;
+  triggerSource: string;
+  branch: string | null;
+  commitSha: string | null;
+  changedFiles: string[];
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface RiskFactors {
+  llmRisk: number;
+  impactedFiles: number;
+  dependencyDepth: number;
+  securityExposure: number;
+  similarTaskFailureRate: number;
+  details?: Record<string, unknown>;
+}
+
+export interface RiskAssessment {
+  id: string;
+  taskId: string;
+  overallScore: number;
+  riskLevel: string;
+  factors: RiskFactors;
+  summary: string | null;
+  computedAt: string;
+}
+
+export interface ProjectRiskSummary {
+  averageScore: number;
+  highRiskCount: number;
+  totalAssessed: number;
+  distribution: Record<string, number>;
+}
+
+export interface KnowledgeGraphNode {
+  id: string;
+  type: 'file' | 'task' | 'test';
+  label: string;
+  data: Record<string, unknown>;
+  position?: { x: number; y: number };
+}
+
+export interface KnowledgeGraphResult {
+  nodes: KnowledgeGraphNode[];
+  edges: { id: string; source: string; target: string; type?: string; label?: string }[];
+  stats: { files: number; tasks: number; tests: number; relations: number };
+}
+
+export interface RegisterInput {
+  email: string;
+  name: string;
+  password: string;
+  organizationName: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+  organizationId?: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  user: { id: string; email: string; name: string; organizationId: string; role: string };
+  organization: OrganizationSummary | null;
+  permissions: string[];
+}
+
+export interface AuthProfile {
+  user: { id: string; email: string; name: string };
+  organization: OrganizationSummary | null;
+  role: string;
+  permissions: string[];
+  organizations: OrganizationSummary[];
+}
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+  plan?: string;
+  role?: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  role: string;
+  user: { id: string; email: string; name: string };
+}
+
+export interface InviteMemberInput {
+  email: string;
+  role: string;
+  name?: string;
+}
+
+export interface PlanLimits {
+  projects: number;
+  repositories: number;
+  tasksPerMonth: number;
+  storageMb: number;
+  users: number;
+  tokensPerMonth: number;
+}
+
+export interface BillingSubscription {
+  status: string;
+  plan: {
+    code: string;
+    name: string;
+    priceMonthlyCents: number;
+    limits: PlanLimits;
+  };
+  currentPeriodStart: string;
+  currentPeriodEnd: string | null;
+}
+
+export interface QuotaItem {
+  metric: string;
+  allowed: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+export interface BillingQuotaSummary {
+  plan: BillingSubscription['plan'];
+  quotas: QuotaItem[];
+}
+
+export interface UsageMetricRow {
+  id?: string;
+  organizationId?: string;
+  year: number;
+  month: number;
+  tokensUsed: number;
+  requestsUsed: number;
+  tasksProcessed: number;
+  storageUsed: number;
+  playwrightRuns: number;
+}
+
+export interface ProjectedCost {
+  currency: string;
+  baseMonthly: number;
+  projectedOverage: number;
+  projectedTotal: number;
+  note: string;
+}
+
+export interface AiReviewFinding {
+  category: 'bug' | 'performance' | 'security' | 'testing' | 'smell';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  detail: string;
+  filePath?: string;
+}
+
+export interface AiReview {
+  id: string;
+  taskId: string;
+  overallScore: number;
+  findings: AiReviewFinding[];
+  summary: string | null;
+  createdAt: string;
+}
+
+export interface NotificationChannel {
+  id: string;
+  organizationId: string;
+  type: 'email' | 'slack' | 'teams';
+  name: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNotificationChannelInput {
+  type: 'email' | 'slack' | 'teams';
+  name: string;
+  config: Record<string, unknown>;
+  enabled?: boolean;
+  events?: string[];
+}
+
+export interface NotificationDelivery {
+  id: string;
+  eventType: string;
+  channelType: string;
+  status: string;
+  subject: string | null;
+  body: string | null;
+  errorMessage: string | null;
+  sentAt: string | null;
+  createdAt: string;
+}
+
+export interface RiskTrendPoint {
+  date: string;
+  averageScore: number;
+  assessments: number;
+  highRiskCount: number;
+}
+
+export interface RepositoryHealthItem {
+  projectId: string;
+  projectName: string;
+  status: string;
+  healthScore: number;
+  filesIndexed: number;
+  indexingProgress: number;
+  lastScanAt: string | null;
+  lastReindexAt: string | null;
+  indexingError: string | null;
+  taskSuccessRate: number;
+  avgRiskScore: number;
+  validationPassRate: number;
+  recentReindexes: number;
+}
+
+export interface EngineeringDashboard {
+  summary: {
+    projects: number;
+    indexedProjects: number;
+    totalTasks: number;
+    completedTasks: number;
+    failedTasks: number;
+    mergedReleases: number;
+    avgRiskScore: number;
+    validationPassRate: number;
+    taskSuccessRate: number;
+  };
+  riskTrends: RiskTrendPoint[];
+  repositoryHealth: RepositoryHealthItem[];
+  tasksPerDay: { date: string; count: number }[];
+  releasesPerWeek: { week: string; count: number }[];
+  riskDistribution: Record<string, number>;
+  recentReleases: Array<{
+    id: string;
+    versionTag: string;
+    projectName: string;
+    taskId: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface ReleaseChangelogEntry {
+  type: string;
+  description: string;
+  taskId?: string;
+  filePath?: string;
+}
+
+export interface Release {
+  id: string;
+  organizationId: string;
+  projectId: string;
+  taskId: string | null;
+  versionTag: string;
+  mergeCommitSha: string | null;
+  releaseNotes: string | null;
+  sprintSummary: string | null;
+  changelog: ReleaseChangelogEntry[];
+  impactSummary: Record<string, unknown>;
+  riskSummary: Record<string, unknown>;
+  createdAt: string;
+  project?: { id: string; name: string };
+  task?: { id: string; taskId: string };
+}
+
+export interface VaultSecretSummary {
+  id: string;
+  keyName: string;
+  keyVersion: number;
+  preview: string;
+  updatedAt: string;
+}
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  organizationId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: string;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface SsoProviderSummary {
+  id: string;
+  provider: string;
+  name: string;
+  enabled: boolean;
+  clientId?: string | null;
+  hasClientSecret?: boolean;
+  issuer?: string | null;
+}
+
+export interface UpsertSsoProviderInput {
+  provider: string;
+  name?: string;
+  clientId: string;
+  clientSecret: string;
+  issuer?: string;
+  enabled?: boolean;
+}
+
+export interface IpAllowlistRule {
+  id: string;
+  organizationId: string;
+  cidr: string;
+  label: string | null;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface RepositoryAccessLogEntry {
+  id: string;
+  organizationId: string;
+  projectId: string | null;
+  action: string;
+  actorId: string | null;
+  ipAddress: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ApprovalGatesConfig {
+  analysis: boolean;
+  code: boolean;
+  pr: boolean;
+  riskAutoApproveMaxScore?: number | null;
+}
+
+export interface ValidationRulesConfig {
+  blockOnLintFail: boolean;
+  blockOnSecurityScan: boolean;
+  minRegressionCoverage?: number;
+}
+
+export interface WorkflowConfig {
+  id: string;
+  organizationId: string;
+  approvalGates: ApprovalGatesConfig;
+  validationRules: ValidationRulesConfig;
+  agentOrder: { disabledSteps?: string[] };
+  notificationRules: { mutedEvents?: string[] };
+}
+
+export interface WorkflowConfigUpdate {
+  approvalGates?: Partial<ApprovalGatesConfig>;
+  validationRules?: Partial<ValidationRulesConfig>;
+  agentOrder?: { disabledSteps?: string[] };
+  notificationRules?: { mutedEvents?: string[] };
+}
+
+export interface PluginCatalogItem {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+  description: string | null;
+  manifest: Record<string, unknown>;
+}
+
+export interface PluginInstallation {
+  id: string;
+  organizationId: string;
+  pluginId: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  installedAt: string;
+  plugin?: PluginCatalogItem;
+}
+

@@ -1,12 +1,22 @@
 export enum TaskStatus {
   PENDING = 'pending',
   ANALYZING = 'analyzing',
-  APPROVAL_REQUIRED = 'approval_required',
+  ANALYSIS_APPROVAL_REQUIRED = 'analysis_approval_required',
+  GENERATING_TESTS = 'generating_tests',
   GENERATING_CODE = 'generating_code',
-  TESTING = 'testing',
+  CODE_APPROVAL_REQUIRED = 'code_approval_required',
+  VALIDATING = 'validating',
+  PLAYWRIGHT_EXECUTION = 'playwright_execution',
+  QA_VERIFICATION = 'qa_verification',
+  SECURITY_SCAN = 'security_scan',
+  CREATING_PR = 'creating_pr',
   PR_CREATED = 'pr_created',
   COMPLETED = 'completed',
   FAILED = 'failed',
+  /** @deprecated use analysis_approval_required or code_approval_required */
+  APPROVAL_REQUIRED = 'approval_required',
+  /** @deprecated use validating */
+  TESTING = 'testing',
 }
 
 export enum RiskLevel {

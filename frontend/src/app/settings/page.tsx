@@ -15,11 +15,18 @@ import {
   Chip,
   Skeleton,
   MenuItem,
+  Box,
 } from '@mui/material';
-import SaveIcon from '@mui/icons-material/Save';
+import Link from 'next/link';
 import StorageIcon from '@mui/icons-material/Storage';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import KeyIcon from '@mui/icons-material/Key';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import SecurityIcon from '@mui/icons-material/Security';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import LoginIcon from '@mui/icons-material/Login';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ExtensionIcon from '@mui/icons-material/Extension';
 import { PageHeader } from '@/components/common/KpiCard';
 import { api, EmbeddingStatus, GitLabStatus } from '@/lib/api';
 
@@ -28,6 +35,15 @@ const HF_MODELS = [
   'sentence-transformers/all-mpnet-base-v2',
   'BAAI/bge-small-en-v1.5',
   'BAAI/bge-base-en-v1.5',
+];
+
+const QUICK_LINKS = [
+  { label: 'Notifications', href: '/settings/notifications', icon: <NotificationsIcon />, desc: 'Email, Slack, Teams alerts' },
+  { label: 'Security', href: '/settings/security', icon: <SecurityIcon />, desc: 'Sessions, IP rules, audit export' },
+  { label: 'Vault', href: '/settings/vault', icon: <VpnKeyIcon />, desc: 'Encrypted org secrets' },
+  { label: 'SSO', href: '/settings/sso', icon: <LoginIcon />, desc: 'Google, Microsoft, OIDC' },
+  { label: 'Workflow', href: '/settings/workflow', icon: <AccountTreeIcon />, desc: 'Pipeline approval gates' },
+  { label: 'Plugins', href: '/settings/plugins', icon: <ExtensionIcon />, desc: 'Install validation hooks' },
 ];
 
 function SettingsContent() {
@@ -150,6 +166,46 @@ function SettingsContent() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {embedError && <Alert severity="error" sx={{ mb: 2 }}>{embedError}</Alert>}
 
+      <Typography variant="overline" sx={{ mb: 1.5, display: 'block' }}>
+        Platform settings
+      </Typography>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {QUICK_LINKS.map((item) => (
+          <Grid item xs={12} sm={6} md={4} key={item.href}>
+            <Card
+              component={Link}
+              href={item.href}
+              sx={{
+                height: '100%',
+                textDecoration: 'none',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 24px rgba(145,158,171,0.16)',
+                },
+              }}
+            >
+              <CardContent>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Box sx={{ color: 'primary.main', mt: 0.25 }}>{item.icon}</Box>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {item.label}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.desc}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Typography variant="overline" sx={{ mb: 1.5, display: 'block' }}>
+        Integrations
+      </Typography>
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
@@ -294,12 +350,6 @@ function SettingsContent() {
           </Card>
         </Grid>
       </Grid>
-
-      <Divider sx={{ my: 3 }} />
-
-      <Button variant="contained" startIcon={<SaveIcon />} onClick={loadStatus}>
-        Refresh Status
-      </Button>
     </>
   );
 }

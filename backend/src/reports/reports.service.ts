@@ -31,6 +31,7 @@ export class ReportsService {
       awaitingApproval,
       analyzing,
       generatingCode,
+      validating,
       testing,
       prCreated,
       indexedProjects,
@@ -40,9 +41,16 @@ export class ReportsService {
       this.taskRepo.count({ where: { status: TaskStatus.COMPLETED } }),
       this.prRepo.count(),
       this.taskRepo.count({ where: { status: TaskStatus.FAILED } }),
-      this.taskRepo.count({ where: { status: TaskStatus.APPROVAL_REQUIRED } }),
+      this.taskRepo.count({
+        where: [
+          { status: TaskStatus.ANALYSIS_APPROVAL_REQUIRED },
+          { status: TaskStatus.CODE_APPROVAL_REQUIRED },
+          { status: TaskStatus.APPROVAL_REQUIRED },
+        ],
+      }),
       this.taskRepo.count({ where: { status: TaskStatus.ANALYZING } }),
       this.taskRepo.count({ where: { status: TaskStatus.GENERATING_CODE } }),
+      this.taskRepo.count({ where: { status: TaskStatus.VALIDATING } }),
       this.taskRepo.count({ where: { status: TaskStatus.TESTING } }),
       this.taskRepo.count({ where: { status: TaskStatus.PR_CREATED } }),
       this.projectRepo.count({ where: { status: ProjectStatus.COMPLETED } }),
@@ -62,7 +70,7 @@ export class ReportsService {
 
     const agentRuns = tasks;
     const successRate = tasks > 0 ? Math.round(((tasks - failedTasks) / tasks) * 100) : 0;
-    const inProgress = analyzing + generatingCode + testing;
+    const inProgress = analyzing + generatingCode + validating + testing;
 
     return {
       projects,
@@ -98,9 +106,25 @@ export class ReportsService {
     const failed = tasks.filter((t) => t.status === TaskStatus.FAILED).length;
     const total = tasks.length;
     const prCreated = tasks.filter((t) => t.status === TaskStatus.PR_CREATED).length;
-    const awaitingApproval = tasks.filter((t) => t.status === TaskStatus.APPROVAL_REQUIRED).length;
+    const awaitingApproval = tasks.filter((t) =>
+      [
+        TaskStatus.ANALYSIS_APPROVAL_REQUIRED,
+        TaskStatus.CODE_APPROVAL_REQUIRED,
+        TaskStatus.APPROVAL_REQUIRED,
+      ].includes(t.status as TaskStatus),
+    ).length;
     const inProgress = tasks.filter((t) =>
-      [TaskStatus.ANALYZING, TaskStatus.GENERATING_CODE, TaskStatus.TESTING].includes(t.status),
+      [
+        TaskStatus.ANALYZING,
+        TaskStatus.GENERATING_TESTS,
+        TaskStatus.GENERATING_CODE,
+        TaskStatus.VALIDATING,
+        TaskStatus.TESTING,
+        TaskStatus.PLAYWRIGHT_EXECUTION,
+        TaskStatus.QA_VERIFICATION,
+        TaskStatus.SECURITY_SCAN,
+        TaskStatus.CREATING_PR,
+      ].includes(t.status as TaskStatus),
     ).length;
 
     const validationByTask = new Map(validations.map((v) => [v.taskId, v]));

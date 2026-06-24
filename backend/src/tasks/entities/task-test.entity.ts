@@ -35,6 +35,31 @@ export class TaskTest {
   @Column({ name: 'regression_coverage', type: 'float', default: 0 })
   regressionCoverage: number;
 
+  @Column({ name: 'qa_test_cases', type: 'jsonb', nullable: true })
+  qaTestCases: {
+    id: string;
+    title: string;
+    category: string;
+    priority: string;
+    preconditions: string;
+    steps: string[];
+    expectedResult: string;
+    actualResult?: string;
+    status: string;
+    relatedFiles?: string[];
+    linkedRequirement?: string;
+    verificationMethod?: string;
+  }[] | null;
+
+  @Column({ name: 'qa_summary', type: 'text', nullable: true })
+  qaSummary: string | null;
+
+  @Column({ name: 'qa_verified_at', type: 'timestamp', nullable: true })
+  qaVerifiedAt: Date | null;
+
+  @Column({ name: 'qa_generated_at', type: 'timestamp', nullable: true })
+  qaGeneratedAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

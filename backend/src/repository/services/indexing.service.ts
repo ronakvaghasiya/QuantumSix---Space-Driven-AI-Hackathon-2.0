@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
@@ -13,6 +13,16 @@ import { ParsedFileMetadata, FileChunk } from '../interfaces/repository.interfac
 import * as fs from 'fs';
 import * as path from 'path';
 import simpleGit from 'simple-git';
+import { RepositoryMemoryService } from '../../memory/services/repository-memory.service';
+import { UsageMeterService } from '../../usage/services/usage-meter.service';
+import { UsageMetricType } from '../../common/enums/usage.enum';
+
+export interface IncrementalIndexOptions {
+  changedFiles?: string[];
+  commitSha?: string;
+  branch?: string;
+  trigger?: string;
+}
 
 @Injectable()
 export class IndexingService implements OnModuleInit {
@@ -30,6 +40,10 @@ export class IndexingService implements OnModuleInit {
     private readonly embedding: EmbeddingService,
     private readonly dependencyGraph: DependencyGraphService,
     private readonly gitlab: GitLabService,
+    @Optional()
+    @Inject(forwardRef(() => RepositoryMemoryService))
+    private readonly repoMemory?: RepositoryMemoryService,
+    @Optional() private readonly usageMeter?: UsageMeterService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -101,6 +115,192 @@ export class IndexingService implements OnModuleInit {
     });
   }
 
+  async startIncrementalIndexing(
+    projectId: string,
+    options?: IncrementalIndexOptions,
+  ): Promise<IndexingJob> {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    if (this.activeJobs.has(projectId)) {
+      const existingJob = await this.jobRepo.findOne({
+        where: { projectId },
+        order: { createdAt: 'DESC' },
+      });
+      if (existingJob) return existingJob;
+    }
+
+    const job = await this.jobRepo.save(
+      this.jobRepo.create({
+        projectId,
+        status: IndexingJobStatus.PENDING,
+        progress: 0,
+        currentStep: 'Incremental reindex queued',
+        startedAt: new Date(),
+      }),
+    );
+
+    await this.projectRepo.update(projectId, {
+      status: ProjectStatus.INDEXING,
+      indexingError: null,
+    });
+
+    const jobPromise = this.runIncrementalPipeline(project, job.id, options).finally(() => {
+      this.activeJobs.delete(projectId);
+    });
+    this.activeJobs.set(projectId, jobPromise);
+
+    return job;
+  }
+
+  private fileToParsed(file: RepositoryFile): ParsedFileMetadata {
+    return {
+      filePath: file.filePath,
+      imports: file.imports,
+      exports: file.exports,
+      functions: file.functions,
+      components: file.components,
+      hooks: file.hooks,
+      contexts: file.contexts,
+      services: file.services,
+      utilities: file.utilities,
+      graphqlQueries: file.graphqlQueries,
+      keywords: file.keywords,
+      lineCount: file.lineCount,
+      content: '',
+    };
+  }
+
+  private async runIncrementalPipeline(
+    project: Project,
+    jobId: string,
+    options?: IncrementalIndexOptions,
+  ): Promise<void> {
+    const reposPath = process.env.REPOS_BASE_PATH || '/tmp/sdlc-repos';
+    const clonePath = path.join(reposPath, project.id);
+
+    try {
+      await this.updateJob(jobId, IndexingJobStatus.CLONING, 5, 'Pulling latest changes');
+      const prevSha = project.lastCommitSha;
+      await this.cloneRepository(project, clonePath);
+      await this.projectRepo.update(project.id, { clonePath });
+
+      const git = simpleGit(clonePath);
+      const commitSha = options?.commitSha || (await git.revparse(['HEAD'])).trim();
+      let changedFiles = options?.changedFiles || [];
+
+      if (changedFiles.length === 0 && prevSha) {
+        try {
+          const diff = await git.diff(['--name-only', prevSha, 'HEAD']);
+          changedFiles = diff.split('\n').map((f) => f.trim()).filter(Boolean);
+        } catch {
+          changedFiles = [];
+        }
+      }
+
+      if (changedFiles.length === 0) {
+        const allPaths = this.scanner.discoverFiles(clonePath);
+        const rel = (abs: string) => path.relative(clonePath, abs).replace(/\\/g, '/');
+        const existing = await this.fileRepo.find({ where: { projectId: project.id } });
+        const existingSet = new Set(existing.map((f) => f.filePath));
+        changedFiles = allPaths.map(rel).filter((f) => !existingSet.has(f));
+      }
+
+      if (changedFiles.length === 0) {
+        await this.projectRepo.update(project.id, {
+          lastCommitSha: commitSha,
+          lastReindexAt: new Date(),
+          status: ProjectStatus.COMPLETED,
+        });
+        await this.updateJob(jobId, IndexingJobStatus.COMPLETED, 100, 'No file changes detected');
+        return;
+      }
+
+      await this.updateJob(jobId, IndexingJobStatus.PARSING, 20, `Updating ${changedFiles.length} files`);
+      const newChunks: FileChunk[] = [];
+      const updatedParsed: ParsedFileMetadata[] = [];
+
+      for (let i = 0; i < changedFiles.length; i++) {
+        const relPath = changedFiles[i];
+        const absPath = path.join(clonePath, relPath);
+        if (!fs.existsSync(absPath)) {
+          await this.fileRepo.delete({ projectId: project.id, filePath: relPath });
+          continue;
+        }
+        const parsed = this.scanner.parseFile(clonePath, absPath);
+        if (!parsed) continue;
+        updatedParsed.push(parsed);
+        const chunks = this.scanner.chunkFile(parsed);
+        newChunks.push(...chunks);
+
+        await this.fileRepo.save(
+          this.fileRepo.create({
+            projectId: project.id,
+            filePath: parsed.filePath,
+            imports: parsed.imports,
+            exports: parsed.exports,
+            functions: parsed.functions,
+            components: parsed.components,
+            hooks: parsed.hooks,
+            contexts: parsed.contexts,
+            services: parsed.services,
+            utilities: parsed.utilities,
+            graphqlQueries: parsed.graphqlQueries,
+            keywords: parsed.keywords,
+            lineCount: parsed.lineCount,
+            chunkCount: chunks.length,
+          }),
+        );
+      }
+
+      await this.updateJob(jobId, IndexingJobStatus.EMBEDDING, 55, 'Updating embeddings');
+      const changedPaths = updatedParsed.map((f) => f.filePath);
+      await this.embedding.deleteFileEmbeddings(project.id, changedPaths);
+      const chunksStored = await this.embedding.embedChunksIncremental(project.id, newChunks);
+
+      await this.updateJob(jobId, IndexingJobStatus.BUILDING_GRAPH, 85, 'Rebuilding dependency graph');
+      const allFiles = await this.fileRepo.find({ where: { projectId: project.id } });
+      const parsedAll = allFiles.map((f) => this.fileToParsed(f));
+      for (const p of updatedParsed) {
+        const idx = parsedAll.findIndex((x) => x.filePath === p.filePath);
+        if (idx >= 0) parsedAll[idx] = p;
+        else parsedAll.push(p);
+      }
+      await this.dependencyGraph.buildGraph(project.id, parsedAll);
+
+      const filesCount = allFiles.length;
+      await this.projectRepo.update(project.id, {
+        status: ProjectStatus.COMPLETED,
+        indexingProgress: 100,
+        filesIndexed: filesCount,
+        lastScanAt: new Date(),
+        lastCommitSha: commitSha,
+        lastReindexAt: new Date(),
+        indexingError: null,
+      });
+
+      await this.repoMemory?.recordSnapshot({
+        projectId: project.id,
+        commitSha,
+        branch: options?.branch || project.defaultBranch,
+        filesCount,
+        chunksCount: chunksStored,
+        metadata: { incremental: true, changedFiles: changedPaths, trigger: options?.trigger },
+      });
+
+      await this.updateJob(jobId, IndexingJobStatus.COMPLETED, 100, `Incremental index: ${changedPaths.length} files`);
+      this.logger.log(`Incremental index for ${project.name}: ${changedPaths.length} files`);
+    } catch (err) {
+      const message = (err as Error).message;
+      this.logger.error(`Incremental indexing failed for ${project.name}: ${message}`);
+      await this.updateJob(jobId, IndexingJobStatus.FAILED, 0, 'Failed', undefined, message);
+      await this.projectRepo.update(project.id, {
+        status: ProjectStatus.FAILED,
+        indexingError: message,
+      });
+    }
+  }
+
   private async runIndexingPipeline(project: Project, jobId: string): Promise<void> {
     const reposPath = process.env.REPOS_BASE_PATH || '/tmp/sdlc-repos';
     const clonePath = path.join(reposPath, project.id);
@@ -165,15 +365,38 @@ export class IndexingService implements OnModuleInit {
       await this.updateJob(jobId, IndexingJobStatus.BUILDING_GRAPH, 90, 'Building dependency graph');
       await this.dependencyGraph.buildGraph(project.id, parsedFiles);
 
-      await this.updateJob(jobId, IndexingJobStatus.COMPLETED, 100, 'Repository ready');
+      const git = simpleGit(clonePath);
+      const commitSha = (await git.revparse(['HEAD'])).trim();
+
+      await this.repoMemory?.recordSnapshot({
+        projectId: project.id,
+        commitSha,
+        branch: project.defaultBranch,
+        filesCount: parsedFiles.length,
+        chunksCount: allChunks.length,
+        metadata: { full: true },
+      });
+
       await this.projectRepo.update(project.id, {
         status: ProjectStatus.COMPLETED,
         indexingProgress: 100,
         filesIndexed: parsedFiles.length,
         lastScanAt: new Date(),
+        lastCommitSha: commitSha,
+        lastReindexAt: new Date(),
         indexingError: null,
       });
 
+      await this.updateJob(jobId, IndexingJobStatus.COMPLETED, 100, 'Repository ready');
+      if (project.organizationId) {
+        const storageEstimate = parsedFiles.length * 50_000;
+        await this.usageMeter?.record({
+          organizationId: project.organizationId,
+          projectId: project.id,
+          metricType: UsageMetricType.STORAGE_BYTES,
+          quantity: storageEstimate,
+        });
+      }
       this.logger.log(`Indexed ${parsedFiles.length} files for project ${project.name}`);
     } catch (err) {
       const message = (err as Error).message;

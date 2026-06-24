@@ -40,4 +40,9 @@ export class ApprovalDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+  @ApiPropertyOptional({ example: 'missing_test_coverage' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }

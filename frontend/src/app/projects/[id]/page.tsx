@@ -15,6 +15,8 @@ import {
   Alert,
   TextField,
   MenuItem,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -25,6 +27,10 @@ import { IndexingProgress } from '@/components/repository/IndexingProgress';
 import { api, Project, IndexingJob, GitLabBranch } from '@/lib/api';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import { MemorySnapshotsCard } from '@/components/repository/MemorySnapshotsCard';
+import { ReleasesPanel } from '@/components/projects/ReleasesPanel';
+import type { MemorySnapshot, ReindexEvent } from '@/lib/api';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +41,15 @@ export default function ProjectDetailPage() {
   const [branches, setBranches] = useState<GitLabBranch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [aiProvider, setAiProvider] = useState<'openai' | 'huggingface'>('openai');
+  const [aiModel, setAiModel] = useState('');
+  const [aiTemperature, setAiTemperature] = useState(0.2);
+  const [aiMaxTokens, setAiMaxTokens] = useState(4096);
+  const [savingAi, setSavingAi] = useState(false);
+  const [autoReindex, setAutoReindex] = useState(true);
+  const [memorySnapshots, setMemorySnapshots] = useState<MemorySnapshot[]>([]);
+  const [reindexEvents, setReindexEvents] = useState<ReindexEvent[]>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +59,13 @@ export default function ProjectDetailPage() {
       ]);
       setProject(p);
       setJob(status?.job || null);
+      if (p) {
+        setAiProvider((p.aiProvider as 'openai' | 'huggingface') || 'openai');
+        setAiModel(p.aiModel || '');
+        setAiTemperature(p.aiTemperature ?? 0.2);
+        setAiMaxTokens(p.aiMaxTokens ?? 4096);
+        setAutoReindex(p.autoReindexEnabled !== false);
+      }
     } catch {
       setProject(null);
     } finally {
@@ -52,6 +74,18 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!id || project?.status !== 'completed') return;
+    setMemoryLoading(true);
+    Promise.all([
+      api.memory.snapshots(id).catch(() => []),
+      api.memory.reindexEvents(id).catch(() => []),
+    ]).then(([snapshots, events]) => {
+      setMemorySnapshots(snapshots);
+      setReindexEvents(events);
+    }).finally(() => setMemoryLoading(false));
+  }, [id, project?.status, project?.lastReindexAt]);
 
   useEffect(() => {
     if (!project?.githubRepoId) return;
@@ -100,6 +134,31 @@ export default function ProjectDetailPage() {
       setActionLoading(false);
     }
   };
+
+  const handleSaveAi = async () => {
+    setSavingAi(true);
+    try {
+      await api.projects.update(id, {
+        aiProvider,
+        aiModel: aiModel || undefined,
+        aiTemperature,
+        aiMaxTokens,
+      });
+      await load();
+    } finally {
+      setSavingAi(false);
+    }
+  };
+
+  const handleAutoReindexToggle = async (enabled: boolean) => {
+    setAutoReindex(enabled);
+    await api.projects.update(id, { autoReindexEnabled: enabled });
+    await load();
+  };
+
+  const webhookBase = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/v1/webhooks`
+    : '/api/v1/webhooks';
 
   if (loading) return <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />;
   if (!project) return <Typography>Project not found.</Typography>;
@@ -212,9 +271,102 @@ export default function ProjectDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {project.status === 'completed' && (
+            <MemorySnapshotsCard
+              snapshots={memorySnapshots}
+              events={reindexEvents}
+              loading={memoryLoading}
+            />
+          )}
+
+          <ReleasesPanel projectId={id} />
         </Grid>
 
         <Grid item xs={12} md={4}>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Intelligence</Typography>
+              <Stack spacing={1.5}>
+                <Button
+                  component={Link}
+                  href={`/projects/${id}/graph`}
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<AccountTreeIcon />}
+                >
+                  Knowledge Graph
+                </Button>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={autoReindex}
+                      onChange={(e) => handleAutoReindexToggle(e.target.checked)}
+                    />
+                  }
+                  label="Auto reindex (webhooks + cron)"
+                />
+                <Typography variant="caption" color="text.secondary" display="block">
+                  GitLab webhook: {webhookBase}/gitlab
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  GitHub webhook: {webhookBase}/github
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>AI Provider (Project)</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                Agents and embeddings for this project use this provider — not global Settings.
+              </Typography>
+              <Stack spacing={2}>
+                <TextField
+                  select
+                  label="Provider"
+                  size="small"
+                  value={aiProvider}
+                  onChange={(e) => setAiProvider(e.target.value as 'openai' | 'huggingface')}
+                  fullWidth
+                >
+                  <MenuItem value="openai">OpenAI</MenuItem>
+                  <MenuItem value="huggingface">Hugging Face</MenuItem>
+                </TextField>
+                <TextField
+                  label="Model"
+                  size="small"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  placeholder={aiProvider === 'openai' ? 'gpt-4o-mini' : 'Qwen/Qwen2.5-7B-Instruct'}
+                  fullWidth
+                />
+                <TextField
+                  label="Temperature"
+                  size="small"
+                  type="number"
+                  inputProps={{ min: 0, max: 2, step: 0.1 }}
+                  value={aiTemperature}
+                  onChange={(e) => setAiTemperature(Number(e.target.value))}
+                  fullWidth
+                />
+                <TextField
+                  label="Max Tokens"
+                  size="small"
+                  type="number"
+                  inputProps={{ min: 256, max: 32768, step: 256 }}
+                  value={aiMaxTokens}
+                  onChange={(e) => setAiMaxTokens(Number(e.target.value))}
+                  fullWidth
+                />
+                <Button variant="contained" onClick={handleSaveAi} disabled={savingAi}>
+                  {savingAi ? 'Saving...' : 'Save AI Settings'}
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>Actions</Typography>

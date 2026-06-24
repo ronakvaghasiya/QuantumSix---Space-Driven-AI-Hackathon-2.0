@@ -4,14 +4,42 @@
   margin: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
   font-family: var(--font-roboto), 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+code {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  font-size: 0.85em;
+  background: rgba(145, 158, 171, 0.12);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(145, 158, 171, 0.4);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

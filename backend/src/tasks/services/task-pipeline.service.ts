@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -9,6 +9,14 @@ import { TaskTest } from '../entities/task-test.entity';
 import { TaskCodeDiff } from '../entities/task-code-diff.entity';
 import { TaskValidation } from '../entities/task-validation.entity';
 import { TaskPullRequest } from '../entities/task-pull-request.entity';
+import { SecurityScan } from '../../security/entities/security-scan.entity';
+import { FeedbackService } from '../../feedback/feedback.service';
+import { AuditService } from '../../audit/audit.service';
+import { SecurityScanService } from '../../security/security-scan.service';
+import { SimilarTaskService } from '../../memory/services/similar-task.service';
+import { RiskEngineService } from '../../risk/services/risk-engine.service';
+import { TaskMemoryService } from '../../memory/services/task-memory.service';
+import { RepositoryMemoryService } from '../../memory/services/repository-memory.service';
 import {
   AgentType,
   RiskLevel,
@@ -23,7 +31,14 @@ import { ProjectStatus } from '../../common/enums/project.enum';
 import { TaskGitService } from './task-git.service';
 import { CodeContextService } from './code-context.service';
 import { ValidationRunnerService } from './validation-runner.service';
+import { QaTestService } from './qa-test.service';
 import { ValidationDetails } from '../types/validation.types';
+import { NotificationService } from '../../notifications/notification.service';
+import { NotificationEventType } from '../../notifications/enums/notification.enum';
+import { AiReviewerService } from '../../ai-reviewer/ai-reviewer.service';
+import { WorkflowConfigService } from '../../workflow-config/workflow-config.service';
+import { PluginLoaderService } from '../../plugins/plugin-loader.service';
+import { PluginHook } from '../../plugins/plugin.types';
 
 interface RequirementAnalysisResult {
   acceptanceCriteria: string;
@@ -36,14 +51,6 @@ interface RequirementAnalysisResult {
 interface ImpactAnalysisResult {
   regressionAreas: string[];
   apiDependencies: string[];
-}
-
-interface TestGenerationResult {
-  functionalTests: { name: string; passed: boolean }[];
-  edgeCases: string[];
-  regressionCases: string[];
-  playwrightSpecs: { filename: string; content: string }[];
-  regressionCoverage: number;
 }
 
 interface CodePlanResult {
@@ -68,12 +75,25 @@ export class TaskPipelineService {
     @InjectRepository(TaskCodeDiff) private readonly codeDiffRepo: Repository<TaskCodeDiff>,
     @InjectRepository(TaskValidation) private readonly validationRepo: Repository<TaskValidation>,
     @InjectRepository(TaskPullRequest) private readonly prRepo: Repository<TaskPullRequest>,
+    @InjectRepository(SecurityScan) private readonly securityScanRepo: Repository<SecurityScan>,
     private readonly llm: LlmService,
     private readonly search: RepositorySearchService,
     private readonly gitlab: GitLabService,
     private readonly taskGit: TaskGitService,
     private readonly codeContext: CodeContextService,
+    private readonly qaTest: QaTestService,
     private readonly validationRunner: ValidationRunnerService,
+    private readonly feedback: FeedbackService,
+    private readonly audit: AuditService,
+    private readonly securityScan: SecurityScanService,
+    private readonly similarTasks: SimilarTaskService,
+    private readonly riskEngine: RiskEngineService,
+    private readonly taskMemory: TaskMemoryService,
+    private readonly repoMemory: RepositoryMemoryService,
+    @Optional() private readonly notifications?: NotificationService,
+    @Optional() private readonly aiReviewer?: AiReviewerService,
+    @Optional() private readonly workflowConfig?: WorkflowConfigService,
+    @Optional() private readonly plugins?: PluginLoaderService,
   ) {}
 
   async markAnalysisApproved(taskId: string): Promise<void> {
@@ -110,10 +130,16 @@ export class TaskPipelineService {
       const requirement = await this.llm.jsonCompletion<RequirementAnalysisResult>(
         'You are a senior product analyst. Return JSON with keys: acceptanceCriteria (string), userStories (string[]), keywords (string[]), risk (low|medium|high|critical), businessImpact (string).',
         `Analyze this software requirement:\n\n${task.requirement}`,
+        { projectId: task.projectId },
       );
 
       await this.setStep(taskId, TimelineStep.REQUIREMENT_ANALYSIS, TimelineStepStatus.COMPLETED);
       await this.setStep(taskId, TimelineStep.REPOSITORY_ANALYSIS, TimelineStepStatus.RUNNING);
+
+      const similar = await this.similarTasks.findSimilarForTask(taskId, 3);
+      const memoryContext = task.project?.status === ProjectStatus.COMPLETED
+        ? await this.repoMemory.retrieveContext(task.projectId, task.requirement, 5)
+        : null;
 
       let repoIntel = {
         relevantFiles: [] as { file: string; score: number; confidence: number }[],
@@ -137,23 +163,44 @@ export class TaskPipelineService {
         .map((f) => `${f.file} (${f.confidence}%)`)
         .join('\n');
 
+      const similarContext = similar.length
+        ? `\n\nSimilar past tasks:\n${similar.map((s) => `- ${s.taskDisplayId || s.taskId}: ${s.requirement.slice(0, 80)} (outcome: ${s.outcome}, similarity: ${s.similarity}%)`).join('\n')}`
+        : '';
+      const memorySnippet = memoryContext?.semanticMatches?.length
+        ? `\n\nRepository memory matches:\n${memoryContext.semanticMatches.slice(0, 5).map((m) => `- ${m.filePath} (score ${m.score.toFixed(2)})`).join('\n')}`
+        : '';
+
       const impact = await this.llm.jsonCompletion<ImpactAnalysisResult>(
         'You are a software architect. Return JSON: regressionAreas (string[]), apiDependencies (string[]).',
-        `Requirement: ${task.requirement}\n\nPotentially impacted files:\n${fileList || 'No indexed files — infer from requirement.'}`,
+        `Requirement: ${task.requirement}\n\nPotentially impacted files:\n${fileList || 'No indexed files — infer from requirement.'}${similarContext}${memorySnippet}`,
+        { projectId: task.projectId },
       );
 
       await this.setStep(taskId, TimelineStep.IMPACT_ANALYSIS, TimelineStepStatus.COMPLETED);
-      await this.setStep(taskId, TimelineStep.TEST_GENERATION, TimelineStepStatus.RUNNING);
 
-      const tests = await this.llm.jsonCompletion<TestGenerationResult>(
-        'You are a QA engineer. Return JSON: functionalTests ([{name, passed}]), edgeCases (string[]), regressionCases (string[]), playwrightSpecs ([{filename, content}]), regressionCoverage (number 0-100). Mark functionalTests passed=true for planned tests.',
-        `Generate tests for:\n${task.requirement}\n\nAcceptance criteria:\n${requirement.acceptanceCriteria}`,
-      );
+      await this.taskRepo.update(taskId, {
+        acceptanceCriteria: requirement.acceptanceCriteria,
+        userStories: requirement.userStories,
+        keywords: [...new Set([...requirement.keywords, ...repoIntel.keywords])],
+        businessImpact: requirement.businessImpact,
+        risk: this.normalizeRisk(requirement.risk),
+      });
+
+      await this.setStep(taskId, TimelineStep.TEST_GENERATION, TimelineStepStatus.RUNNING);
+      await this.taskRepo.update(taskId, { status: TaskStatus.GENERATING_TESTS });
 
       const impactedFiles = repoIntel.relevantFiles.map((f) => ({
         path: f.file,
         confidence: f.confidence,
       }));
+
+      const feedbackContext = await this.feedback.contextForTask(taskId);
+      const qaResult = await this.qaTest.generateBeforeCodeGen(
+        { ...task, acceptanceCriteria: requirement.acceptanceCriteria },
+        requirement.acceptanceCriteria,
+        impactedFiles.map((f) => f.path),
+        feedbackContext,
+      );
 
       await this.analysisRepo.save(
         this.analysisRepo.create({
@@ -168,31 +215,93 @@ export class TaskPipelineService {
       await this.testRepo.save(
         this.testRepo.create({
           taskId,
-          functionalTests: tests.functionalTests,
-          edgeCases: tests.edgeCases,
-          regressionCases: tests.regressionCases,
-          playwrightSpecs: tests.playwrightSpecs,
-          regressionCoverage: tests.regressionCoverage,
+          functionalTests: this.qaTest.toFunctionalTests(qaResult.qaTestCases || []),
+          edgeCases: qaResult.edgeCases || [],
+          regressionCases: qaResult.regressionCases || [],
+          playwrightSpecs: qaResult.playwrightSpecs || [],
+          regressionCoverage: qaResult.regressionCoverage || 0,
+          qaTestCases: (qaResult.qaTestCases || []).map((tc) => ({
+            ...tc,
+            status: tc.status || 'pending',
+          })),
+          qaSummary: qaResult.qaSummary,
+          qaGeneratedAt: new Date(),
         }),
       );
 
-      await this.taskRepo.update(taskId, {
-        status: TaskStatus.APPROVAL_REQUIRED,
+      const taskFields = {
         acceptanceCriteria: requirement.acceptanceCriteria,
         userStories: requirement.userStories,
         keywords: [...new Set([...requirement.keywords, ...repoIntel.keywords])],
         businessImpact: requirement.businessImpact,
         risk: this.normalizeRisk(requirement.risk),
-      });
+      };
 
       await this.setStep(taskId, TimelineStep.TEST_GENERATION, TimelineStepStatus.COMPLETED);
-      // Approval waits for user — keep PENDING (not RUNNING) so timeline doesn't show a spinner
-      await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
-      this.logger.log(`Analysis complete for task ${taskId}`);
+
+      const riskAssessment = await this.riskEngine.assessTask(taskId);
+      const orgId = task.project?.organizationId;
+
+      if (orgId && this.plugins) {
+        const pluginResults = await this.plugins.runHook(orgId, PluginHook.POST_ANALYSIS, {
+          taskId,
+          projectId: task.projectId,
+        });
+        for (const r of pluginResults) {
+          if (r.status !== 'ok') {
+            await this.audit.log('task', taskId, 'plugin_hook', { result: r }, 'plugin', orgId);
+          }
+        }
+      }
+
+      const needsAnalysisApproval =
+        !orgId ||
+        (await this.workflowConfig?.requiresAnalysisApproval(orgId, riskAssessment.overallScore) ??
+          true);
+
+      if (needsAnalysisApproval) {
+        await this.taskRepo.update(taskId, {
+          ...taskFields,
+          status: TaskStatus.ANALYSIS_APPROVAL_REQUIRED,
+        });
+        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
+        await this.notifications
+          ?.notifyTask(taskId, NotificationEventType.ANALYSIS_READY)
+          .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
+      } else {
+        await this.taskRepo.update(taskId, {
+          ...taskFields,
+          status: TaskStatus.GENERATING_CODE,
+        });
+        await this.markAnalysisApproved(taskId);
+        await this.audit.log(
+          'task',
+          taskId,
+          'analysis_auto_approved',
+          { reason: 'workflow_config' },
+          'system',
+          orgId,
+        );
+        setImmediate(() => {
+          this.runCodeGeneration(taskId).catch((err) =>
+            this.logger.error(`Auto code generation failed for ${taskId}: ${(err as Error).message}`),
+          );
+        });
+      }
+
+      await this.audit.log('task', taskId, 'similar_tasks_found', {
+        count: similar.length,
+        tasks: similar.map((s) => s.taskId),
+      }, 'system', orgId);
+      await this.audit.log('task', taskId, 'analysis_completed', {
+        testCases: qaResult.qaTestCases?.length || 0,
+      }, 'system', orgId);
+      this.logger.log(`Analysis + QA test cases complete for task ${taskId}`);
     } catch (error) {
-      this.logger.error(`Analysis failed for ${taskId}: ${(error as Error).message}`);
+      const message = (error as Error).message || 'Analysis failed';
+      this.logger.error(`Analysis failed for ${taskId}: ${message}`);
       await this.taskRepo.update(taskId, { status: TaskStatus.FAILED });
-      await this.failRunningSteps(taskId);
+      await this.failRunningSteps(taskId, message);
     }
   }
 
@@ -206,15 +315,18 @@ export class TaskPipelineService {
       await this.setStep(taskId, TimelineStep.CODE_GENERATION, TimelineStepStatus.RUNNING);
 
       const analysis = await this.analysisRepo.findOne({ where: { taskId } });
+      const testRecord = await this.testRepo.findOne({ where: { taskId } });
       const impactedPaths = (analysis?.impactedFiles || []).map((f) => f.path);
       const clonePath = task.project?.clonePath;
+      const testCasesContext = this.formatTestCasesForPrompt(testRecord);
+      const feedbackContext = await this.feedback.contextForTask(taskId);
 
       const plan = await this.llm.jsonCompletion<CodePlanResult>(
         `You are a senior developer planning code changes for a real repository.
 Return JSON only: { implementationPlan (string), targetFiles (string[] — relative paths, max 2 files) }.
-Pick the smallest set of files that satisfy the requirement. NEVER pick markdown/doc-only paths.`,
-        `Task: ${task.taskId}\nRequirement: ${task.requirement}\n\nAcceptance criteria:\n${task.acceptanceCriteria || 'N/A'}\n\nImpacted files:\n${impactedPaths.join('\n') || 'Infer from requirement'}`,
-        { maxTokens: 1024 },
+Pick the smallest set of files that satisfy the requirement AND approved test cases. NEVER pick markdown/doc-only paths.`,
+        `Task: ${task.taskId}\nRequirement: ${task.requirement}\n\nAcceptance criteria:\n${task.acceptanceCriteria || 'N/A'}\n\nApproved test cases:\n${testCasesContext}\n\nImpacted files:\n${impactedPaths.join('\n') || 'Infer from requirement'}${feedbackContext ? `\n\nPrior feedback:\n${feedbackContext}` : ''}`,
+        { maxTokens: 1024, projectId: task.projectId },
       );
 
       const targetFiles = (
@@ -235,13 +347,13 @@ Pick the smallest set of files that satisfy the requirement. NEVER pick markdown
           const edit = await this.llm.jsonCompletion<FileEditResult>(
             `You edit ONE source file for a task. Return JSON only:
 { newContent (string — complete updated file), changeComments (string[] — what changed) }
-Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
-            `Task: ${task.taskId}\nRequirement: ${task.requirement}\nPlan: ${plan.implementationPlan}\n\nFile: ${filePath}\n\n${
+Rules: Real code only. Implementation MUST satisfy approved test cases. No markdown docs.`,
+            `Task: ${task.taskId}\nRequirement: ${task.requirement}\nPlan: ${plan.implementationPlan}\n\nApproved test cases:\n${testCasesContext}\n\nFile: ${filePath}\n\n${
               currentContent
                 ? `Current file content:\n\`\`\`\n${currentContent}\n\`\`\``
                 : 'File not in clone — generate realistic content for this path.'
-            }`,
-            { maxTokens: 8192 },
+            }${feedbackContext ? `\n\nPrior feedback:\n${feedbackContext}` : ''}`,
+            { maxTokens: 8192, projectId: task.projectId },
           );
 
           if (edit.newContent?.trim()) {
@@ -294,11 +406,64 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
       );
 
       await this.setStep(taskId, TimelineStep.CODE_GENERATION, TimelineStepStatus.COMPLETED);
+
+      await this.aiReviewer
+        ?.reviewTask(taskId)
+        .catch((err) => this.logger.warn(`AI review failed: ${(err as Error).message}`));
+
+      const orgId = task.project?.organizationId;
+      if (orgId && this.plugins) {
+        await this.plugins.runHook(orgId, PluginHook.POST_CODE_GENERATION, {
+          taskId,
+          projectId: task.projectId,
+        });
+      }
+
+      const needsCodeApproval =
+        !orgId || (await this.workflowConfig?.requiresCodeApproval(orgId) ?? true);
+
+      if (needsCodeApproval) {
+        await this.taskRepo.update(taskId, { status: TaskStatus.CODE_APPROVAL_REQUIRED });
+        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.PENDING);
+        await this.notifications
+          ?.notifyTask(taskId, NotificationEventType.CODE_READY)
+          .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
+      } else {
+        const latestDiff = await this.codeDiffRepo.findOne({
+          where: { taskId },
+          order: { createdAt: 'DESC' },
+        });
+        if (latestDiff) {
+          latestDiff.approvalStatus = 'approved';
+          await this.codeDiffRepo.save(latestDiff);
+        }
+        await this.markAnalysisApproved(taskId);
+        await this.setStep(taskId, TimelineStep.APPROVAL, TimelineStepStatus.COMPLETED);
+        await this.taskRepo.update(taskId, { status: TaskStatus.VALIDATING });
+        await this.audit.log(
+          'task',
+          taskId,
+          'code_auto_approved',
+          { reason: 'workflow_config' },
+          'system',
+          orgId,
+        );
+        setImmediate(() => {
+          this.runValidation(taskId).catch((err) =>
+            this.logger.error(`Auto validation failed for ${taskId}: ${(err as Error).message}`),
+          );
+        });
+      }
+
+      await this.audit.log('task', taskId, 'code_generation_completed', {
+        files: fileEdits.map((e) => e.path),
+      }, 'system', orgId);
       this.logger.log(`Code generation complete for task ${taskId}`);
     } catch (error) {
-      this.logger.error(`Code generation failed for ${taskId}: ${(error as Error).message}`);
+      const message = (error as Error).message || 'Code generation failed';
+      this.logger.error(`Code generation failed for ${taskId}: ${message}`);
       await this.taskRepo.update(taskId, { status: TaskStatus.FAILED });
-      await this.failRunningSteps(taskId);
+      await this.failRunningSteps(taskId, message);
     }
   }
 
@@ -307,7 +472,7 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
     if (!task) return;
 
     try {
-      await this.taskRepo.update(taskId, { status: TaskStatus.TESTING });
+      await this.taskRepo.update(taskId, { status: TaskStatus.VALIDATING });
       await this.setStep(taskId, TimelineStep.VALIDATION, TimelineStepStatus.RUNNING);
 
       const codeDiff = await this.codeDiffRepo.findOne({ where: { taskId } });
@@ -315,32 +480,57 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
       const branchName = `feature/repopilot-${task.taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
 
       const clonePath = await this.taskGit.prepareWorkspace(task, branchName, codeDiff);
+
+      await this.taskRepo.update(taskId, { status: TaskStatus.PLAYWRIGHT_EXECUTION });
       const validation = clonePath
         ? await this.validationRunner.runFull(
             clonePath,
-            tests?.functionalTests || [],
+            tests?.qaTestCases
+              ? this.qaTest.toFunctionalTests(this.qaTest.fromEntity(tests.qaTestCases))
+              : tests?.functionalTests || [],
             tests?.playwrightSpecs || [],
           )
         : null;
 
-      if (tests && validation) {
+      await this.setStep(taskId, TimelineStep.VALIDATION, TimelineStepStatus.COMPLETED);
+      await this.taskRepo.update(taskId, { status: TaskStatus.QA_VERIFICATION });
+      await this.setStep(taskId, TimelineStep.QA, TimelineStepStatus.RUNNING);
+
+      let qaSummary = validation?.qaSummary || 'No validation';
+      if (tests?.qaTestCases?.length && validation) {
+        const verified = this.qaTest.verifyTestCases(
+          this.qaTest.fromEntity(tests.qaTestCases),
+          validation,
+        );
+        tests.qaTestCases = verified.cases;
+        tests.qaSummary = verified.summary;
+        tests.qaVerifiedAt = new Date();
+        tests.functionalTests = this.qaTest.toFunctionalTests(verified.cases);
+        tests.regressionCoverage = verified.cases.length
+          ? Math.round((verified.cases.filter((c) => c.status === 'pass').length / verified.cases.length) * 100)
+          : tests.regressionCoverage;
+        await this.testRepo.save(tests);
+        qaSummary = verified.summary;
+      } else if (tests && validation) {
         tests.functionalTests = validation.tests.results.length > 0
           ? validation.tests.results.map((r) => ({ name: r.name, passed: r.passed }))
           : tests.functionalTests.map((t) => ({
               ...t,
               passed: validation.build.status === 'pass' && validation.eslint.status !== 'fail',
             }));
+        tests.qaVerifiedAt = new Date();
+        tests.qaSummary = validation.qaSummary;
         await this.testRepo.save(tests);
       }
 
       const details: ValidationDetails = validation
-        ? { ...validation, clonePath, verifiedAt: new Date().toISOString() }
+        ? { ...validation, qaSummary, clonePath, verifiedAt: new Date().toISOString() }
         : {
             eslint: { status: 'skipped', command: '', errorCount: 0, warningCount: 0, issues: [], output: 'No clone path' },
             prettier: { status: 'skipped', command: '', errorCount: 0, warningCount: 0, issues: [], output: 'No clone path' },
             build: { status: 'skipped', command: '', errorCount: 0, warningCount: 0, issues: [], output: 'No clone path' },
             tests: { status: 'skipped', command: '', passed: 0, failed: 0, results: [], output: 'No clone path' },
-            qaSummary: 'Repository clone not available',
+            qaSummary,
             clonePath: null,
             verifiedAt: new Date().toISOString(),
           };
@@ -358,16 +548,68 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
         }),
       );
 
-      await this.setStep(taskId, TimelineStep.VALIDATION, TimelineStepStatus.COMPLETED);
-      await this.setStep(taskId, TimelineStep.QA, TimelineStepStatus.RUNNING);
+      const orgId = task.project?.organizationId;
+      const validationRules = orgId
+        ? await this.workflowConfig?.getValidationRules(orgId)
+        : null;
+
+      if (
+        validationRules?.blockOnLintFail !== false &&
+        details.eslint.status === 'fail'
+      ) {
+        throw new Error('Lint validation failed (workflow rule)');
+      }
+
+      if (orgId && this.plugins) {
+        const pluginResults = await this.plugins.runHook(orgId, PluginHook.POST_VALIDATION, {
+          taskId,
+          projectId: task.projectId,
+          payload: { regressionCoverage: tests?.regressionCoverage || 0 },
+        });
+        const failed = pluginResults.filter((r) => r.status === 'fail');
+        if (failed.length) {
+          throw new Error(`Plugin validation failed: ${failed.map((f) => f.message).join('; ')}`);
+        }
+      }
+
       await this.setStep(taskId, TimelineStep.QA, TimelineStepStatus.COMPLETED);
+      await this.taskRepo.update(taskId, { status: TaskStatus.SECURITY_SCAN });
+
+      if (clonePath) {
+        const scanResult = await this.securityScan.scanRepository(clonePath);
+        await this.securityScanRepo.save(
+          this.securityScanRepo.create({
+            taskId,
+            status: scanResult.status,
+            secretsFound: scanResult.secretsFound,
+            vulnerabilities: scanResult.vulnerabilities,
+            unsafePatterns: scanResult.unsafePatterns,
+            blockedPr: scanResult.blockedPr,
+            summary: scanResult.summary,
+          }),
+        );
+        await this.audit.log('task', taskId, 'security_scan_completed', {
+          status: scanResult.status,
+          blocked: scanResult.blockedPr,
+          summary: scanResult.summary,
+        });
+        if (scanResult.blockedPr) {
+          const blockSecurity = validationRules?.blockOnSecurityScan !== false;
+          if (blockSecurity) {
+            throw new Error(`Security scan blocked PR creation: ${scanResult.summary}`);
+          }
+          this.logger.warn(`Security scan blocked PR but workflow allows continue for ${taskId}`);
+        }
+      }
+
+      await this.taskRepo.update(taskId, { status: TaskStatus.CREATING_PR });
       await this.setStep(taskId, TimelineStep.PR, TimelineStepStatus.RUNNING);
 
       const commitSha = clonePath ? await this.taskGit.commitAndPush(task, branchName, codeDiff) : null;
       const mrDescription = this.taskGit.buildMrDescription(
         task,
         codeDiff,
-        validation?.qaSummary,
+        qaSummary,
       );
       const pr = await this.createPullRequest(
         task,
@@ -390,11 +632,36 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
       await this.setStep(taskId, TimelineStep.PR, TimelineStepStatus.COMPLETED);
       await this.finalizeTimeline(taskId);
       await this.taskRepo.update(taskId, { status: TaskStatus.PR_CREATED });
+      await this.taskMemory.indexTask(taskId, 'success');
+      await this.audit.log('task', taskId, 'pr_created', {
+        prUrl: pr.prUrl,
+        prNumber: pr.prNumber,
+      });
+      await this.notifications
+        ?.notifyTask(taskId, NotificationEventType.PR_CREATED, {
+          prUrl: pr.prUrl || undefined,
+          prNumber: pr.prNumber || undefined,
+        })
+        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
+      await this.notifications
+        ?.notifyTask(taskId, NotificationEventType.MR_READY, {
+          prUrl: pr.prUrl || undefined,
+          prNumber: pr.prNumber || undefined,
+        })
+        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
       this.logger.log(`Validation + PR complete for task ${taskId}`);
     } catch (error) {
-      this.logger.error(`Validation failed for ${taskId}: ${(error as Error).message}`);
+      const message = (error as Error).message;
+      this.logger.error(`Validation failed for ${taskId}: ${message}`);
+      const isSecurity = message.includes('Security scan blocked');
+      await this.notifications
+        ?.notifyTask(taskId, isSecurity ? NotificationEventType.SECURITY_SCAN_FAILED : NotificationEventType.VALIDATION_FAILED, {
+          errorMessage: message,
+        })
+        .catch((err) => this.logger.warn(`Notification failed: ${(err as Error).message}`));
       await this.taskRepo.update(taskId, { status: TaskStatus.FAILED });
-      await this.failRunningSteps(taskId);
+      await this.taskMemory.indexTask(taskId, 'failed').catch(() => undefined);
+      await this.failRunningSteps(taskId, message);
     }
   }
 
@@ -413,28 +680,45 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
     const tests = await this.testRepo.findOne({ where: { taskId } });
     const full = await this.validationRunner.runFull(
       clonePath,
-      tests?.functionalTests || [],
+      tests?.qaTestCases
+        ? this.qaTest.toFunctionalTests(this.qaTest.fromEntity(tests.qaTestCases))
+        : tests?.functionalTests || [],
       tests?.playwrightSpecs || [],
     );
     full.eslint = fixed.eslint;
     full.prettier = fixed.prettier;
 
-    const details: ValidationDetails = {
-      ...full,
-      clonePath,
-      verifiedAt: new Date().toISOString(),
-      fixApplied: true,
-    };
-
-    if (tests) {
+    let qaSummary = full.qaSummary;
+    if (tests?.qaTestCases?.length) {
+      const verified = this.qaTest.verifyTestCases(
+        this.qaTest.fromEntity(tests.qaTestCases),
+        full,
+      );
+      tests.qaTestCases = verified.cases;
+      tests.qaSummary = verified.summary;
+      tests.qaVerifiedAt = new Date();
+      tests.functionalTests = this.qaTest.toFunctionalTests(verified.cases);
+      qaSummary = verified.summary;
+      await this.testRepo.save(tests);
+    } else if (tests) {
       tests.functionalTests = full.tests.results.length > 0
         ? full.tests.results.map((r) => ({ name: r.name, passed: r.passed }))
         : tests.functionalTests.map((t) => ({
             ...t,
             passed: full.build.status === 'pass' && full.eslint.status !== 'fail',
           }));
+      tests.qaVerifiedAt = new Date();
+      tests.qaSummary = full.qaSummary;
       await this.testRepo.save(tests);
     }
+
+    const details: ValidationDetails = {
+      ...full,
+      qaSummary,
+      clonePath,
+      verifiedAt: new Date().toISOString(),
+      fixApplied: true,
+    };
 
     await this.taskGit.commitAndPush(task, branchName, null);
 
@@ -488,6 +772,9 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
     if (status === TimelineStepStatus.COMPLETED || status === TimelineStepStatus.FAILED) {
       entry.completedAt = new Date();
     }
+    if (status === TimelineStepStatus.COMPLETED) {
+      entry.message = null;
+    }
     await this.timelineRepo.save(entry);
     await this.syncAssignedAgent(taskId, step, status);
   }
@@ -524,15 +811,26 @@ Rules: Real code only. Keep unchanged parts identical. No markdown docs.`,
     }
   }
 
-  private async failRunningSteps(taskId: string): Promise<void> {
+  private async failRunningSteps(taskId: string, message?: string): Promise<void> {
     const running = await this.timelineRepo.find({
       where: { taskId, status: TimelineStepStatus.RUNNING },
     });
     for (const entry of running) {
       entry.status = TimelineStepStatus.FAILED;
       entry.completedAt = new Date();
+      if (message) entry.message = message.slice(0, 500);
       await this.timelineRepo.save(entry);
     }
+  }
+
+  private formatTestCasesForPrompt(testRecord: TaskTest | null): string {
+    if (!testRecord?.qaTestCases?.length) return 'No approved test cases on record.';
+    return testRecord.qaTestCases
+      .map(
+        (tc) =>
+          `${tc.id}: ${tc.title} [${tc.category}/${tc.priority}]\nSteps: ${tc.steps?.join(' → ') || 'N/A'}\nExpected: ${tc.expectedResult}`,
+      )
+      .join('\n\n');
   }
 
   private normalizeRisk(risk: string): RiskLevel {

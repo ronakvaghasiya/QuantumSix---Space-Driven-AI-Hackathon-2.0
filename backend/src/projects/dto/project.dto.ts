@@ -1,6 +1,7 @@
-import { IsString, IsOptional, IsEnum, IsUrl } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsUrl, IsNumber, IsBoolean, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Framework, Language } from '../../common/enums/project.enum';
+import { AiProvider } from '../../common/enums/ai.enum';
 
 export class CreateProjectDto {
   @ApiProperty({ example: 'BannerBuzz' })
@@ -45,6 +46,30 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   githubRepoName?: string;
+
+  @ApiPropertyOptional({ enum: AiProvider, default: AiProvider.OPENAI })
+  @IsOptional()
+  @IsEnum(AiProvider)
+  aiProvider?: AiProvider;
+
+  @ApiPropertyOptional({ example: 'gpt-4o-mini' })
+  @IsOptional()
+  @IsString()
+  aiModel?: string;
+
+  @ApiPropertyOptional({ example: 0.2 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(2)
+  aiTemperature?: number;
+
+  @ApiPropertyOptional({ example: 4096 })
+  @IsOptional()
+  @IsNumber()
+  @Min(256)
+  @Max(32768)
+  aiMaxTokens?: number;
 }
 
 export class UpdateProjectDto {
@@ -72,6 +97,40 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ enum: AiProvider })
+  @IsOptional()
+  @IsEnum(AiProvider)
+  aiProvider?: AiProvider;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  aiModel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(2)
+  aiTemperature?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(256)
+  @Max(32768)
+  aiMaxTokens?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vcsProvider?: string;
+
+  @ApiPropertyOptional({ description: 'Enable auto-reindex via webhooks and cron' })
+  @IsOptional()
+  @IsBoolean()
+  autoReindexEnabled?: boolean;
 }
 
 export class ConnectProjectDto {

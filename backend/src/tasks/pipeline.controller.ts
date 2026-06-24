@@ -1,8 +1,11 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { IsUUID } from 'class-validator';
 import { TaskPipelineService } from './services/task-pipeline.service';
 
 class PipelineTaskDto {
+  @ApiProperty()
+  @IsUUID()
   taskId: string;
 }
 

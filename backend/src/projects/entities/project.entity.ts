@@ -5,17 +5,28 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Task } from '../../tasks/entities/task.entity';
 import { ProjectStatus, Framework, Language } from '../../common/enums/project.enum';
+import { AiProvider } from '../../common/enums/ai.enum';
 import { RepositoryFile } from '../../repository/entities/repository-file.entity';
 import { DependencyEdge } from '../../repository/entities/dependency-edge.entity';
 import { IndexingJob } from '../../repository/entities/indexing-job.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ name: 'organization_id', nullable: true })
+  organizationId: string | null;
+
+  @ManyToOne(() => Organization, (org) => org.projects, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column()
   name: string;
@@ -61,6 +72,30 @@ export class Project {
 
   @Column({ name: 'indexing_error', type: 'text', nullable: true })
   indexingError: string | null;
+
+  @Column({ name: 'ai_provider', type: 'enum', enum: AiProvider, default: AiProvider.OPENAI })
+  aiProvider: AiProvider;
+
+  @Column({ name: 'ai_model', type: 'varchar', nullable: true })
+  aiModel: string | null;
+
+  @Column({ name: 'ai_temperature', type: 'float', default: 0.2 })
+  aiTemperature: number;
+
+  @Column({ name: 'ai_max_tokens', type: 'int', default: 4096 })
+  aiMaxTokens: number;
+
+  @Column({ name: 'vcs_provider', type: 'varchar', default: 'gitlab' })
+  vcsProvider: string;
+
+  @Column({ name: 'last_commit_sha', type: 'varchar', nullable: true })
+  lastCommitSha: string | null;
+
+  @Column({ name: 'auto_reindex_enabled', default: true })
+  autoReindexEnabled: boolean;
+
+  @Column({ name: 'last_reindex_at', type: 'timestamptz', nullable: true })
+  lastReindexAt: Date | null;
 
   @OneToMany(() => Task, (task) => task.project)
   tasks: Task[];

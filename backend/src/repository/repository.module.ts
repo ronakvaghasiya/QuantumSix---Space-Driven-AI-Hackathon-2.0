@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RepositoryController } from './repository.controller';
 import { IndexingService } from './services/indexing.service';
@@ -12,6 +12,11 @@ import { DependencyEdge } from './entities/dependency-edge.entity';
 import { IndexingJob } from './entities/indexing-job.entity';
 import { GitLabModule } from '../gitlab/gitlab.module';
 
+import { AiModule } from '../ai/ai.module';
+import { SettingsModule } from '../settings/settings.module';
+import { MemoryModule } from '../memory/memory.module';
+import { UsageModule } from '../usage/usage.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -21,6 +26,10 @@ import { GitLabModule } from '../gitlab/gitlab.module';
       IndexingJob,
     ]),
     GitLabModule,
+    AiModule,
+    SettingsModule,
+    UsageModule,
+    forwardRef(() => MemoryModule),
   ],
   controllers: [RepositoryController],
   providers: [

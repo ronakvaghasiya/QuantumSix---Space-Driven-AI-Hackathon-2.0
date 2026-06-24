@@ -1,11 +1,29 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { WebhooksService } from './webhooks.service';
+import { VcsWebhookService } from './vcs-webhook.service';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Webhooks')
+@Public()
 @Controller('webhooks')
 export class WebhooksController {
-  constructor(private readonly webhooksService: WebhooksService) {}
+  constructor(
+    private readonly webhooksService: WebhooksService,
+    private readonly vcsWebhook: VcsWebhookService,
+  ) {}
+
+  @Post('gitlab')
+  @ApiOperation({ summary: 'GitLab push webhook — triggers incremental reindex' })
+  handleGitLab(@Body() body: Record<string, unknown>) {
+    return this.vcsWebhook.handleGitLabPush(body);
+  }
+
+  @Post('github')
+  @ApiOperation({ summary: 'GitHub push webhook — triggers incremental reindex' })
+  handleGitHub(@Body() body: Record<string, unknown>) {
+    return this.vcsWebhook.handleGitHubPush(body);
+  }
 
   @Post('n8n/task-update')
   @ApiOperation({ summary: 'Receive task status updates from n8n' })

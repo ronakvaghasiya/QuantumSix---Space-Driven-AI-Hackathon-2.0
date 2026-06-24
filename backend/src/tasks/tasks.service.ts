@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { TaskTimeline } from './entities/task-timeline.entity';
 import { CreateTaskDto, UploadTasksDto, ApprovalDto } from './dto/task.dto';
@@ -10,6 +10,17 @@ import { N8nService } from '../webhooks/n8n.service';
 import { TaskPipelineService } from './services/task-pipeline.service';
 import { TaskPullRequest } from './entities/task-pull-request.entity';
 import { GitLabService } from '../gitlab/gitlab.service';
+import { FeedbackService } from '../feedback/feedback.service';
+import { AuditService } from '../audit/audit.service';
+import { FeedbackGate } from './entities/task-feedback.entity';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { BillingService } from '../billing/services/billing.service';
+import { UsageMeterService } from '../usage/services/usage-meter.service';
+import { QuotaMetric } from '../common/enums/usage.enum';
+import { UsageMetricType } from '../common/enums/usage.enum';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationEventType } from '../notifications/enums/notification.enum';
+import { ReleaseIntelligenceService } from '../releases/services/release-intelligence.service';
 
 const DEFAULT_TIMELINE_STEPS: TimelineStep[] = [
   TimelineStep.REQUIREMENT_ANALYSIS,
@@ -35,8 +46,39 @@ export class TasksService {
     private readonly n8nService: N8nService,
     private readonly pipeline: TaskPipelineService,
     private readonly gitlab: GitLabService,
+    private readonly feedback: FeedbackService,
+    private readonly audit: AuditService,
     private readonly config: ConfigService,
+    private readonly orgs: OrganizationsService,
+    private readonly billing: BillingService,
+    private readonly usageMeter: UsageMeterService,
+    @Optional() private readonly notifications?: NotificationService,
+    @Optional() private readonly releaseIntelligence?: ReleaseIntelligenceService,
   ) {}
+
+  private async recordApproval(
+    taskId: string,
+    gate: FeedbackGate,
+    dto: ApprovalDto,
+    organizationId: string,
+    actorId?: string,
+  ): Promise<void> {
+    await this.feedback.record(
+      taskId,
+      gate,
+      dto.action,
+      dto.reason || null,
+      dto.comment || null,
+    );
+    await this.audit.log(
+      'task',
+      taskId,
+      `${gate}_${dto.action}`,
+      { reason: dto.reason, comment: dto.comment },
+      actorId || 'user',
+      organizationId,
+    );
+  }
 
   private pipelineMode(): string {
     return this.config.get('TASK_PIPELINE_MODE', 'backend');
@@ -72,16 +114,21 @@ export class TasksService {
     }
   }
 
-  async findAll(projectId?: string): Promise<Task[]> {
-    const where = projectId ? { projectId } : {};
-    return this.taskRepo.find({
-      where,
-      relations: ['project'],
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(organizationId: string, projectId?: string): Promise<Task[]> {
+    const qb = this.taskRepo
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.project', 'project')
+      .where('project.organization_id = :organizationId', { organizationId })
+      .orderBy('task.created_at', 'DESC');
+
+    if (projectId) {
+      qb.andWhere('task.project_id = :projectId', { projectId });
+    }
+
+    return qb.getMany();
   }
 
-  async findOne(id: string): Promise<Task> {
+  async findOne(id: string, organizationId: string): Promise<Task> {
     const task = await this.taskRepo.findOne({
       where: { id },
       relations: [
@@ -94,7 +141,9 @@ export class TasksService {
         'pullRequests',
       ],
     });
-    if (!task) throw new NotFoundException(`Task ${id} not found`);
+    if (!task || task.project?.organizationId !== organizationId) {
+      throw new NotFoundException(`Task ${id} not found`);
+    }
     return task;
   }
 
@@ -105,7 +154,20 @@ export class TasksService {
     });
   }
 
-  async create(dto: CreateTaskDto): Promise<Task> {
+  private async assertTaskIdAvailable(taskId: string): Promise<void> {
+    const existing = await this.taskRepo.findOne({ where: { taskId }, select: ['id'] });
+    if (existing) {
+      throw new BadRequestException(
+        `Task ID "${taskId}" already exists. Use a unique task_id.`,
+      );
+    }
+  }
+
+  async create(dto: CreateTaskDto, organizationId: string): Promise<Task> {
+    await this.orgs.assertProjectInOrg(dto.projectId, organizationId);
+    await this.billing.assertQuota(organizationId, QuotaMetric.TASKS_PER_MONTH);
+    await this.assertTaskIdAvailable(dto.taskId);
+
     const task = this.taskRepo.create({
       ...dto,
       status: TaskStatus.PENDING,
@@ -121,35 +183,87 @@ export class TasksService {
     );
     await this.timelineRepo.save(timelineEntries);
 
+    await this.usageMeter.record({
+      organizationId,
+      projectId: dto.projectId,
+      taskId: saved.id,
+      metricType: UsageMetricType.TASK_EXECUTION,
+      quantity: 1,
+    });
+
     this.triggerAnalysis(saved);
 
-    return this.findOne(saved.id);
+    return this.findOne(saved.id, organizationId);
   }
 
-  async uploadCsv(dto: UploadTasksDto): Promise<Task[]> {
+  async uploadCsv(dto: UploadTasksDto, organizationId: string): Promise<Task[]> {
+    await this.orgs.assertProjectInOrg(dto.projectId, organizationId);
+
     const lines = dto.csvContent.trim().split('\n');
+    if (!lines.length) {
+      throw new BadRequestException('CSV content is empty');
+    }
+
     const header = lines[0].toLowerCase();
     const hasHeader = header.includes('task_id');
     const dataLines = hasHeader ? lines.slice(1) : lines;
 
-    const tasks: Task[] = [];
+    const rows: { taskId: string; requirement: string }[] = [];
     for (const line of dataLines) {
       const [taskId, ...rest] = line.split(',');
       const requirement = rest.join(',').trim();
       if (!taskId?.trim() || !requirement) continue;
+      rows.push({ taskId: taskId.trim(), requirement });
+    }
 
-      const task = await this.create({
-        taskId: taskId.trim(),
-        projectId: dto.projectId,
-        requirement,
-      });
+    if (!rows.length) {
+      throw new BadRequestException(
+        'No valid task rows found. CSV must include task_id and requirement columns.',
+      );
+    }
+
+    const seen = new Set<string>();
+    const csvDupes: string[] = [];
+    for (const row of rows) {
+      if (seen.has(row.taskId)) csvDupes.push(row.taskId);
+      seen.add(row.taskId);
+    }
+    if (csvDupes.length) {
+      throw new BadRequestException(
+        `Duplicate task IDs in CSV: ${[...new Set(csvDupes)].join(', ')}`,
+      );
+    }
+
+    const taskIds = rows.map((r) => r.taskId);
+    const existing = await this.taskRepo.find({
+      where: { taskId: In(taskIds) },
+      select: ['taskId'],
+    });
+    if (existing.length) {
+      throw new BadRequestException(
+        `Task ID(s) already exist: ${existing.map((t) => t.taskId).join(', ')}. Use unique IDs.`,
+      );
+    }
+
+    const tasks: Task[] = [];
+    for (const row of rows) {
+      const task = await this.create(
+        {
+          taskId: row.taskId,
+          projectId: dto.projectId,
+          requirement: row.requirement,
+        },
+        organizationId,
+      );
       tasks.push(task);
     }
     return tasks;
   }
 
-  async approveAnalysis(id: string, dto: ApprovalDto): Promise<Task> {
-    const task = await this.findOne(id);
+  async approveAnalysis(id: string, dto: ApprovalDto, organizationId: string, actorId?: string): Promise<Task> {
+    const task = await this.findOne(id, organizationId);
+    await this.recordApproval(id, 'analysis', dto, organizationId, actorId);
+
     if (dto.action === 'approve') {
       task.status = TaskStatus.GENERATING_CODE;
       await this.pipeline.markAnalysisApproved(id);
@@ -161,18 +275,21 @@ export class TasksService {
       this.triggerAnalysis(task);
     }
     await this.taskRepo.save(task);
-    return this.findOne(id);
+    return this.findOne(id, organizationId);
   }
 
-  async fixLint(id: string): Promise<Task> {
+  async fixLint(id: string, organizationId: string): Promise<Task> {
+    await this.findOne(id, organizationId);
     await this.pipeline.fixLintAndRevalidate(id);
-    return this.findOne(id);
+    return this.findOne(id, organizationId);
   }
 
-  async approveCode(id: string, dto: ApprovalDto): Promise<Task> {
-    const task = await this.findOne(id);
+  async approveCode(id: string, dto: ApprovalDto, organizationId: string, actorId?: string): Promise<Task> {
+    const task = await this.findOne(id, organizationId);
+    await this.recordApproval(id, 'code', dto, organizationId, actorId);
+
     if (dto.action === 'approve') {
-      task.status = TaskStatus.TESTING;
+      task.status = TaskStatus.VALIDATING;
       this.triggerValidation(task);
     } else if (dto.action === 'reject') {
       task.status = TaskStatus.FAILED;
@@ -181,15 +298,23 @@ export class TasksService {
       this.triggerCodeGeneration(task);
     }
     await this.taskRepo.save(task);
-    return this.findOne(id);
+    return this.findOne(id, organizationId);
   }
 
-  async getRecent(limit = 5): Promise<Task[]> {
-    return this.taskRepo.find({
-      relations: ['project'],
-      order: { createdAt: 'DESC' },
-      take: limit,
-    });
+  async getAuditLogs(id: string, organizationId: string) {
+    await this.findOne(id, organizationId);
+    return this.audit.findByEntity('task', id);
+  }
+
+  async getFeedback(id: string, organizationId: string) {
+    await this.findOne(id, organizationId);
+    return this.feedback.findByTask(id);
+  }
+
+  async getRecent(organizationId: string, limit = 5): Promise<Task[]> {
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 5;
+    const tasks = await this.findAll(organizationId);
+    return tasks.slice(0, safeLimit);
   }
 
   private resolveGitlabProjectId(task: Task): number {
@@ -238,8 +363,8 @@ export class TasksService {
     return lines.join('\n');
   }
 
-  async mergePr(id: string): Promise<Task> {
-    const task = await this.findOne(id);
+  async mergePr(id: string, organizationId: string): Promise<Task> {
+    const task = await this.findOne(id, organizationId);
     const pr = await this.getOpenPr(task);
     const projectId = this.resolveGitlabProjectId(task);
     await this.gitlab.mergeMergeRequest(projectId, pr.prNumber!);
@@ -247,21 +372,29 @@ export class TasksService {
     await this.prRepo.save(pr);
     task.status = TaskStatus.COMPLETED;
     await this.taskRepo.save(task);
-    return this.findOne(id);
+    await this.audit.log('task', id, 'mr_merged', { prNumber: pr.prNumber }, 'user', organizationId);
+    await this.releaseIntelligence
+      ?.createReleaseFromMerge(task, organizationId, pr.commitSha)
+      .catch(() => undefined);
+    await this.notifications
+      ?.notifyTask(id, NotificationEventType.TASK_COMPLETED)
+      .catch(() => undefined);
+    return this.findOne(id, organizationId);
   }
 
-  async closePr(id: string): Promise<Task> {
-    const task = await this.findOne(id);
+  async closePr(id: string, organizationId: string): Promise<Task> {
+    const task = await this.findOne(id, organizationId);
     const pr = await this.getOpenPr(task);
     const projectId = this.resolveGitlabProjectId(task);
     await this.gitlab.closeMergeRequest(projectId, pr.prNumber!);
     pr.reviewStatus = 'closed';
     await this.prRepo.save(pr);
-    return this.findOne(id);
+    await this.audit.log('task', id, 'mr_closed', { prNumber: pr.prNumber }, 'user', organizationId);
+    return this.findOne(id, organizationId);
   }
 
-  async approvePr(id: string): Promise<Task> {
-    const task = await this.findOne(id);
+  async approvePr(id: string, organizationId: string): Promise<Task> {
+    const task = await this.findOne(id, organizationId);
     const pr = await this.getOpenPr(task);
     const projectId = this.resolveGitlabProjectId(task);
     const codeDiff = task.codeDiffs?.[0];
@@ -273,6 +406,7 @@ export class TasksService {
     );
     pr.reviewStatus = 'approved';
     await this.prRepo.save(pr);
-    return this.findOne(id);
+    await this.audit.log('task', id, 'mr_approved', { prNumber: pr.prNumber }, 'user', organizationId);
+    return this.findOne(id, organizationId);
   }
 }

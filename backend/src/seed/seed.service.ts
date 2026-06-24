@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../projects/entities/project.entity';
 import { Task } from '../tasks/entities/task.entity';
+import { TenancyService } from '../tenancy/tenancy.service';
 import { TaskTimeline } from '../tasks/entities/task-timeline.entity';
 import { TaskAnalysis } from '../tasks/entities/task-analysis.entity';
 import { TaskTest } from '../tasks/entities/task-test.entity';
@@ -29,14 +30,17 @@ export class SeedService {
     @InjectRepository(TaskCodeDiff) private readonly codeDiffRepo: Repository<TaskCodeDiff>,
     @InjectRepository(TaskValidation) private readonly validationRepo: Repository<TaskValidation>,
     @InjectRepository(TaskPullRequest) private readonly prRepo: Repository<TaskPullRequest>,
+    private readonly tenancy: TenancyService,
   ) {}
 
   async seedDemoData() {
+    const organizationId = this.tenancy.getDefaultOrganizationId();
     let project = await this.projectRepo.findOne({ where: { name: 'BannerBuzz' } });
     if (!project) {
       project = await this.projectRepo.save(
         this.projectRepo.create({
           name: 'BannerBuzz',
+          organizationId,
           repositoryUrl: 'https://gitlab.com/company/bannerbuzz-nextjs',
           defaultBranch: 'dev',
           framework: Framework.NEXTJS,

@@ -10,6 +10,7 @@ import { TaskTest } from '../tasks/entities/task-test.entity';
 import { TaskCodeDiff } from '../tasks/entities/task-code-diff.entity';
 import { TaskValidation } from '../tasks/entities/task-validation.entity';
 import { TaskPullRequest } from '../tasks/entities/task-pull-request.entity';
+import { TenancyModule } from '../tenancy/tenancy.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TaskPullRequest } from '../tasks/entities/task-pull-request.entity';
       TaskValidation,
       TaskPullRequest,
     ]),
+    TenancyModule,
   ],
   controllers: [SeedController],
   providers: [SeedService],

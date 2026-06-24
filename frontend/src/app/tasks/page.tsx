@@ -36,11 +36,17 @@ export default function TasksPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState('');
   const [csvContent, setCsvContent] = useState('');
+  const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const load = () => {
     setLoading(true);
+    setError('');
     Promise.all([
-      api.tasks.list().catch(() => []),
+      api.tasks.list().catch((e) => {
+        setError((e as Error).message);
+        return [] as Task[];
+      }),
       api.projects.list().catch(() => []),
     ]).then(([t, p]) => {
       setTasks(t);
@@ -53,10 +59,18 @@ export default function TasksPage() {
 
   const handleUpload = async () => {
     if (!selectedProject || !csvContent.trim()) return;
-    await api.tasks.upload({ projectId: selectedProject, csvContent });
-    setUploadOpen(false);
-    setCsvContent('');
-    load();
+    setUploading(true);
+    setError('');
+    try {
+      await api.tasks.upload({ projectId: selectedProject, csvContent });
+      setUploadOpen(false);
+      setCsvContent('');
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,6 +92,8 @@ export default function TasksPage() {
           </Button>
         }
       />
+
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
       {!loading && projects.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }} action={
@@ -170,8 +186,8 @@ export default function TasksPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setUploadOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpload} disabled={!selectedProject || !csvContent.trim()}>
-            Upload
+          <Button variant="contained" onClick={handleUpload} disabled={uploading || !selectedProject || !csvContent.trim()}>
+            {uploading ? 'Uploading…' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>

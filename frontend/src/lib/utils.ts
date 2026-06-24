@@ -1,23 +1,39 @@
 export const TASK_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   analyzing: 'Analyzing',
-  approval_required: 'Approval Required',
+  analysis_approval_required: 'Analysis Approval',
+  generating_tests: 'Generating Tests',
   generating_code: 'Generating Code',
-  testing: 'Testing',
+  code_approval_required: 'Code Approval',
+  validating: 'Validating',
+  playwright_execution: 'Playwright',
+  qa_verification: 'QA Verification',
+  security_scan: 'Security Scan',
+  creating_pr: 'Creating PR',
   pr_created: 'PR Created',
   completed: 'Completed',
   failed: 'Failed',
+  approval_required: 'Approval Required',
+  testing: 'Testing',
 };
 
 export const TASK_STATUS_COLORS: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   pending: 'default',
   analyzing: 'info',
-  approval_required: 'warning',
+  analysis_approval_required: 'warning',
+  generating_tests: 'info',
   generating_code: 'primary',
-  testing: 'secondary',
+  code_approval_required: 'warning',
+  validating: 'secondary',
+  playwright_execution: 'info',
+  qa_verification: 'secondary',
+  security_scan: 'warning',
+  creating_pr: 'primary',
   pr_created: 'success',
   completed: 'success',
   failed: 'error',
+  approval_required: 'warning',
+  testing: 'secondary',
 };
 
 export const RISK_COLORS: Record<string, 'success' | 'warning' | 'error' | 'default'> = {

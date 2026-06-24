@@ -34,8 +34,13 @@ import { PageHeader } from '@/components/common/KpiCard';
 import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { ValidationDetailsView } from '@/components/tasks/ValidationDetailsView';
 import { CodeDiffViewer } from '@/components/tasks/CodeDiffViewer';
+import { QaTestCasesView } from '@/components/tasks/QaTestCasesView';
+import { RejectModal } from '@/components/tasks/RejectModal';
+import { AuditTab } from '@/components/tasks/AuditTab';
 import { MrActionButtons, prStatusColor } from '@/components/tasks/MrActionButtons';
-import { api, TaskDetail, RepositoryIntelligenceResult } from '@/lib/api';
+import { SimilarTasksPanel, RiskBreakdownCard } from '@/components/tasks/IntelligencePanels';
+import { AiReviewPanel } from '@/components/tasks/AiReviewPanel';
+import { api, TaskDetail, RepositoryIntelligenceResult, SimilarTaskResult, RiskAssessment } from '@/lib/api';
 import { TIMELINE_LABELS, formatDate, PROJECT_STATUS_LABELS, agentLabel } from '@/lib/utils';
 import { DependencyGraphView } from '@/components/repository/DependencyGraphView';
 import Link from 'next/link';
@@ -59,6 +64,14 @@ export default function TaskDetailPage() {
   const [repoIntel, setRepoIntel] = useState<RepositoryIntelligenceResult | null>(null);
   const [intelLoading, setIntelLoading] = useState(false);
   const [fixingLint, setFixingLint] = useState(false);
+  const [rejectModal, setRejectModal] = useState<{
+    open: boolean;
+    type: 'analysis' | 'code';
+    action: 'reject' | 'request_changes';
+  }>({ open: false, type: 'analysis', action: 'reject' });
+  const [similarTasks, setSimilarTasks] = useState<SimilarTaskResult[]>([]);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
+  const [intelPanelsLoading, setIntelPanelsLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -68,8 +81,24 @@ export default function TaskDetailPage() {
   useEffect(() => { load(); }, [id]);
 
   useEffect(() => {
+    if (!task?.id) return;
+    setIntelPanelsLoading(true);
+    Promise.all([
+      api.memory.similarForTask(task.id).catch(() => []),
+      api.risk.get(task.id).catch(() => null),
+    ]).then(([similar, risk]) => {
+      setSimilarTasks(similar);
+      setRiskAssessment(risk);
+    }).finally(() => setIntelPanelsLoading(false));
+  }, [task?.id, task?.status]);
+
+  useEffect(() => {
     if (!task) return;
-    const active = ['pending', 'analyzing', 'generating_code', 'testing'].includes(task.status);
+    const active = [
+      'pending', 'analyzing', 'generating_tests', 'generating_code',
+      'validating', 'testing', 'playwright_execution', 'qa_verification',
+      'security_scan', 'creating_pr',
+    ].includes(task.status);
     if (!active) return;
     const timer = setInterval(() => {
       api.tasks.get(id).then(setTask).catch(() => undefined);
@@ -97,10 +126,14 @@ export default function TaskDetailPage() {
     }
   };
 
-  const handleApproval = async (type: 'analysis' | 'code', action: string) => {
-    if (type === 'analysis') await api.tasks.approveAnalysis(id, action);
-    else await api.tasks.approveCode(id, action);
+  const handleApproval = async (type: 'analysis' | 'code', action: string, reason?: string, comment?: string) => {
+    if (type === 'analysis') await api.tasks.approveAnalysis(id, action, comment, reason);
+    else await api.tasks.approveCode(id, action, comment, reason);
     load();
+  };
+
+  const openReject = (type: 'analysis' | 'code', action: 'reject' | 'request_changes') => {
+    setRejectModal({ open: true, type, action });
   };
 
   if (loading) return <Skeleton variant="rectangular" height={600} sx={{ borderRadius: 2 }} />;
@@ -111,9 +144,20 @@ export default function TaskDetailPage() {
   const codeDiff = task.codeDiffs?.[0];
   const validation = task.validations?.[0];
   const pr = task.pullRequests?.[0];
+  const isAnalysisApproval = ['analysis_approval_required', 'approval_required'].includes(task.status) && !codeDiff;
+  const isCodeApproval = ['code_approval_required', 'approval_required'].includes(task.status) && !!codeDiff;
 
   return (
     <>
+      <RejectModal
+        open={rejectModal.open}
+        title={rejectModal.action === 'reject' ? 'Reject' : 'Request Changes'}
+        action={rejectModal.action}
+        onClose={() => setRejectModal((s) => ({ ...s, open: false }))}
+        onConfirm={(reason, comments) => {
+          handleApproval(rejectModal.type, rejectModal.action, reason, comments);
+        }}
+      />
       <PageHeader
         title={task.taskId}
         subtitle={`${task.project?.name || 'Unknown'} — ${task.requirement}`}
@@ -162,7 +206,7 @@ export default function TaskDetailPage() {
                     ? 'success'
                     : step.status === 'running'
                       ? 'info'
-                      : step.step === 'approval' && task.status === 'approval_required'
+                      : step.step === 'approval' && (isAnalysisApproval || isCodeApproval)
                         ? 'warning'
                         : 'default'
                 }
@@ -181,6 +225,7 @@ export default function TaskDetailPage() {
           <Tab label="Code Diff" />
           <Tab label="Validation" />
           <Tab label="Pull Request" />
+          <Tab label="Audit" />
         </Tabs>
 
         <CardContent>
@@ -220,6 +265,12 @@ export default function TaskDetailPage() {
 
                 <Typography variant="subtitle2" gutterBottom>Risk Level</Typography>
                 <RiskChip risk={task.risk} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <RiskBreakdownCard risk={riskAssessment} loading={intelPanelsLoading} />
+              </Grid>
+              <Grid item xs={12}>
+                <SimilarTasksPanel tasks={similarTasks} loading={intelPanelsLoading} />
               </Grid>
             </Grid>
           </TabPanel>
@@ -338,73 +389,20 @@ export default function TaskDetailPage() {
             ) : (
               <Typography color="text.secondary">Agent analysis pending...</Typography>
             )}
-            {task.status === 'approval_required' && !codeDiff && (
+            {isAnalysisApproval && (
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                <Button variant="contained" color="success" startIcon={<ThumbUpIcon />} onClick={() => handleApproval('analysis', 'approve')}>Approve</Button>
-                <Button variant="outlined" color="error" startIcon={<ThumbDownIcon />} onClick={() => handleApproval('analysis', 'reject')}>Reject</Button>
-                <Button variant="outlined" startIcon={<EditIcon />} onClick={() => handleApproval('analysis', 'request_changes')}>Request Changes</Button>
+                <Button variant="contained" color="success" startIcon={<ThumbUpIcon />} onClick={() => handleApproval('analysis', 'approve')}>Approve Tests & Analysis</Button>
+                <Button variant="outlined" color="error" startIcon={<ThumbDownIcon />} onClick={() => openReject('analysis', 'reject')}>Reject</Button>
+                <Button variant="outlined" startIcon={<EditIcon />} onClick={() => openReject('analysis', 'request_changes')}>Request Changes</Button>
               </Stack>
             )}
           </TabPanel>
 
           <TabPanel value={tab} index={2}>
             {tests ? (
-              <>
-                <Typography variant="subtitle2" gutterBottom>Functional Tests (Verified)</Typography>
-                <List dense>
-                  {tests.functionalTests.map((t) => (
-                    <ListItem key={t.name}>
-                      <ListItemIcon>
-                        {t.passed ? <CheckCircleIcon color="success" fontSize="small" /> : <ErrorIcon color="error" fontSize="small" />}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={t.name}
-                        secondary={t.passed ? 'Verified by QA pipeline' : 'Failed verification'}
-                      />
-                      <Chip label={t.passed ? 'PASS' : 'FAIL'} size="small" color={t.passed ? 'success' : 'error'} />
-                    </ListItem>
-                  ))}
-                </List>
-                {tests.edgeCases.length > 0 && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="subtitle2" gutterBottom>Edge Cases</Typography>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                      {tests.edgeCases.map((c) => (
-                        <Chip key={c} label={c} size="small" variant="outlined" color="warning" />
-                      ))}
-                    </Stack>
-                  </>
-                )}
-                {tests.regressionCases.length > 0 && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="subtitle2" gutterBottom>Regression Cases</Typography>
-                    <List dense>
-                      {tests.regressionCases.map((c) => (
-                        <ListItem key={c}><ListItemText primary={c} /></ListItem>
-                      ))}
-                    </List>
-                  </>
-                )}
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle2" gutterBottom>Playwright Specs</Typography>
-                <Stack spacing={1}>
-                  {tests.playwrightSpecs.map((s) => (
-                    <Box key={s.filename} sx={{ p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
-                      <Typography variant="caption" fontWeight={600}>{s.filename}</Typography>
-                      <Box component="pre" sx={{ fontSize: '0.75rem', overflow: 'auto', maxHeight: 120, mt: 0.5 }}>
-                        {s.content.slice(0, 500)}{s.content.length > 500 ? '...' : ''}
-                      </Box>
-                    </Box>
-                  ))}
-                </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  Regression Coverage: {tests.regressionCoverage}%
-                </Typography>
-              </>
+              <QaTestCasesView tests={tests} taskStatus={task.status} />
             ) : (
-              <Typography color="text.secondary">Tests pending — generated after analysis completes.</Typography>
+              <Typography color="text.secondary">Tests pending — generated after code generation completes.</Typography>
             )}
           </TabPanel>
 
@@ -422,11 +420,11 @@ export default function TaskDetailPage() {
                 </Typography>
                 <CodeDiffViewer codeDiff={codeDiff} />
 
-                {codeDiff && !validation && task.status !== 'testing' && (
+                {isCodeApproval && !validation && (
                   <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <Button variant="contained" color="success" startIcon={<ThumbUpIcon />} onClick={() => handleApproval('code', 'approve')}>Approve</Button>
-                    <Button variant="outlined" color="error" startIcon={<ThumbDownIcon />} onClick={() => handleApproval('code', 'reject')}>Reject</Button>
-                    <Button variant="outlined" startIcon={<EditIcon />} onClick={() => handleApproval('code', 'request_changes')}>Request Changes</Button>
+                    <Button variant="contained" color="success" startIcon={<ThumbUpIcon />} onClick={() => handleApproval('code', 'approve')}>Approve Code</Button>
+                    <Button variant="outlined" color="error" startIcon={<ThumbDownIcon />} onClick={() => openReject('code', 'reject')}>Reject</Button>
+                    <Button variant="outlined" startIcon={<EditIcon />} onClick={() => openReject('code', 'request_changes')}>Request Changes</Button>
                   </Stack>
                 )}
               </>
@@ -524,10 +522,17 @@ export default function TaskDetailPage() {
                   <Typography variant="subtitle2" gutterBottom>MR Actions</Typography>
                   <MrActionButtons taskId={id} reviewStatus={pr.reviewStatus} size="medium" onUpdated={load} />
                 </Grid>
+                <Grid item xs={12}>
+                  <AiReviewPanel taskId={id} />
+                </Grid>
               </Grid>
             ) : (
               <Typography color="text.secondary">Pull request pending...</Typography>
             )}
+          </TabPanel>
+
+          <TabPanel value={tab} index={6}>
+            <AuditTab taskId={id} />
           </TabPanel>
         </CardContent>
       </Card>

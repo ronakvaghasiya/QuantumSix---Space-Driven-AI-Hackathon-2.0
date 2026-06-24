@@ -22,8 +22,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'SDLC Platform — AI Engineering Copilot',
-  description: 'AI-Powered Autonomous SDLC Platform',
+  title: 'RepoPilot AI — SDLC Engineering Copilot',
+  description: 'AI-Powered Autonomous SDLC Platform by QuantumSix',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
