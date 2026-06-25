@@ -32,10 +32,10 @@ import { StatusChip, RiskChip, PrStatusChip } from '@/components/common/StatusCh
 import { api, DashboardStats, Task, PullRequest, Project } from '@/lib/api';
 import { MrActionButtons } from '@/components/tasks/MrActionButtons';
 import {
-  agentLabel,
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_COLORS,
   formatDate,
+  resolveAssignedAgentDisplay,
 } from '@/lib/utils';
 import { colorAlpha } from '@/theme';
 import { BRAND } from '@/lib/brand';
@@ -338,7 +338,10 @@ export default function DashboardPage() {
                         </Stack>
                         <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: { xs: 200, sm: 320 }, display: 'block' }}>
                           {task.project?.name}
-                          {task.assignedAgent && ` · ${agentLabel(task.assignedAgent)}`}
+                          {(() => {
+                            const agent = resolveAssignedAgentDisplay(task.assignedAgent, task.status);
+                            return agent !== '—' ? ` · ${agent}` : '';
+                          })()}
                         </Typography>
                       </Box>
                       <StatusChip status={task.status} />

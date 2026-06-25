@@ -250,6 +250,34 @@ export function agentLabel(agent: string | null | undefined): string {
   return AGENT_LABELS[agent] || capitalize(agent);
 }
 
+/** Tasks list — assignedAgent is null while waiting for human approval */
+export function resolveAssignedAgentDisplay(
+  assignedAgent: string | null | undefined,
+  status: string,
+): string {
+  if (assignedAgent) return agentLabel(assignedAgent);
+
+  const byStatus: Record<string, string> = {
+    analysis_approval_required: 'Your Approval',
+    code_approval_required: 'Your Approval',
+    approval_required: 'Your Approval',
+    pending: 'Requirement Analysis Agent',
+    analyzing: 'Requirement Analysis Agent',
+    generating_tests: 'Test Generation Agent',
+    generating_code: 'Code Generation Agent',
+    validating: 'Validation Agent',
+    testing: 'Validation Agent',
+    playwright_execution: 'QA Agent',
+    qa_verification: 'QA Agent',
+    security_scan: 'GitLab PR Agent',
+    creating_pr: 'GitLab PR Agent',
+    pr_created: 'GitLab PR Agent',
+    completed: 'GitLab PR Agent',
+  };
+
+  return byStatus[status] || '—';
+}
+
 export function formatDate(date: string | null): string {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('en-US', {

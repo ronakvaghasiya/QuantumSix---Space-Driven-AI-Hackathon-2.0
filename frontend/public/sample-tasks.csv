@@ -1,0 +1,5 @@
+task_id,requirement
+BB-005,please label "Sides Preview" change to "Sides Preview 123"
+BB-14342,Fix upload artwork preview not showing after user selects image in design tool
+BB-14343,Fix canvas synchronization issue when switching between mobile and desktop view
+BB-14401,Add validation error message when user uploads unsupported file format
