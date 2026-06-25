@@ -74,7 +74,7 @@ npm install
 npm run dev
 ```
 
-Dashboard: http://localhost:3000
+Dashboard: http://localhost:3100
 
 ### 4. Import n8n Workflows
 

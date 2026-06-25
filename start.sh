@@ -7,5 +7,5 @@ cd "$ROOT"
 echo "==> Starting Docker (postgres, qdrant, n8n)..."
 docker-compose up -d
 
-echo "==> Starting Backend (3001) + Frontend (3000)..."
+echo "==> Starting Backend (3001) + Frontend (3100)..."
 npm run dev

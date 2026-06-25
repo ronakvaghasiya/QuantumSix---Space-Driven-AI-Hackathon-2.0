@@ -15,6 +15,8 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
+  Chip,
+  Button,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -23,8 +25,10 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import MenuIcon from '@mui/icons-material/Menu';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TuneIcon from '@mui/icons-material/Tune';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { ReactNode, useState } from 'react';
 import { BRAND } from '@/lib/brand';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NAV_WIDTH = 280;
 
@@ -60,6 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [open, setOpen] = useState(false);
+  const { user, platform, logout } = useAuth();
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -125,6 +130,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </List>
           </Box>
         ))}
+      </Box>
+
+      <Box sx={{ px: 2, py: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Stack spacing={1}>
+          {user && (
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700}>
+                {user.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {user.email}
+              </Typography>
+              {platform && (
+                <Chip
+                  label={`${platform.clientPlatform || 'client'} · server ${platform.serverOs}`}
+                  size="small"
+                  sx={{ mt: 1, fontSize: '0.65rem' }}
+                />
+              )}
+            </Box>
+          )}
+          <Button
+            size="small"
+            color="inherit"
+            startIcon={<LogoutIcon fontSize="small" />}
+            onClick={logout}
+            sx={{ justifyContent: 'flex-start' }}
+          >
+            Sign out
+          </Button>
+        </Stack>
       </Box>
     </Box>
   );

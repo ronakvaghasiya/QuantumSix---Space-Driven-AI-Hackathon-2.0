@@ -10,6 +10,7 @@ import {
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { Public } from '../auth/public.decorator';
 import { GitLabService } from './gitlab.service';
 import { SaveGitLabPatDto } from './dto/gitlab.dto';
 
@@ -27,17 +28,19 @@ export class GitLabController {
     return this.gitlabService.getConnectionStatus();
   }
 
+  @Public()
   @Get('auth')
   @ApiOperation({ summary: 'Redirect to GitLab OAuth (optional — requires GITLAB_CLIENT_ID)' })
   auth(@Res() res: Response) {
     res.redirect(this.gitlabService.getOAuthUrl());
   }
 
+  @Public()
   @Get('callback')
   @ApiOperation({ summary: 'GitLab OAuth callback' })
   async callback(@Query('code') code: string, @Res() res: Response) {
     await this.gitlabService.handleOAuthCallback(code);
-    const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3100');
     res.redirect(`${frontendUrl}/settings?gitlab=connected`);
   }
 

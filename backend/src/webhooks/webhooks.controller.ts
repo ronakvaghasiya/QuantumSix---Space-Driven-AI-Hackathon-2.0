@@ -1,9 +1,11 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Public } from '../auth/public.decorator';
 import { WebhooksService } from './webhooks.service';
 import { VcsWebhookService } from './vcs-webhook.service';
 
 @ApiTags('Webhooks')
+@Public()
 @Controller('webhooks')
 export class WebhooksController {
   constructor(
