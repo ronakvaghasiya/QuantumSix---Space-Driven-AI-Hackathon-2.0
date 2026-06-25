@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UploadTasksDto, ApprovalDto } from './dto/task.dto';
+import { CreateTaskDto, UploadTasksDto, ApprovalDto, RevertCodeDto } from './dto/task.dto';
 
 @ApiTags('Tasks')
 @Controller('tasks')
@@ -88,6 +88,12 @@ export class TasksController {
   @ApiOperation({ summary: 'Re-run code generation after a failed attempt' })
   retryCodegen(@Param('id', ParseUUIDPipe) id: string) {
     return this.tasksService.retryCodegen(id);
+  }
+
+  @Post(':id/revert-code')
+  @ApiOperation({ summary: 'Revert AI code changes (specific files or all)' })
+  revertCode(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RevertCodeDto) {
+    return this.tasksService.revertCode(id, dto);
   }
 
   @Post(':id/approve-code')

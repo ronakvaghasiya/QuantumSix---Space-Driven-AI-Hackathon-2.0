@@ -22,6 +22,7 @@ import { CodeDiffViewer } from './CodeDiffViewer';
 import { MrActionButtons, prStatusColor } from './MrActionButtons';
 import { PrStatusChip } from '@/components/common/StatusChip';
 import { CodeDiffEntry, PullRequest, ValidationEntry } from '@/lib/api';
+import { BRAND } from '@/lib/brand';
 import { colorAlpha } from '@/theme';
 
 function fileCount(codeDiff: CodeDiffEntry): number {
@@ -39,12 +40,20 @@ export function PullRequestView({
   validation,
   taskId,
   onUpdated,
+  revertible,
+  reverting,
+  onRevertFile,
+  onRevertAll,
 }: {
   pr: PullRequest;
   codeDiff?: CodeDiffEntry | null;
   validation?: ValidationEntry | null;
   taskId: string;
   onUpdated?: () => void;
+  revertible?: boolean;
+  reverting?: boolean;
+  onRevertFile?: (path: string) => void;
+  onRevertAll?: () => void;
 }) {
   const filesChanged = codeDiff ? fileCount(codeDiff) : 0;
   const shortSha = pr.commitSha ? pr.commitSha.slice(0, 8) : null;
@@ -180,7 +189,7 @@ export function PullRequestView({
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <AutoAwesomeIcon color="primary" fontSize="small" />
               <Typography variant="subtitle1" fontWeight={700}>AI Generated Code</Typography>
-              <Chip label="RepoPilot" size="small" color="primary" variant="outlined" />
+              <Chip label={BRAND.name} size="small" color="primary" variant="outlined" />
             </Stack>
 
             {codeDiff.implementationPlan && (
@@ -210,7 +219,13 @@ export function PullRequestView({
               Side-by-side diff — original (left) vs AI modified (right)
             </Typography>
 
-            <CodeDiffViewer codeDiff={codeDiff} />
+            <CodeDiffViewer
+              codeDiff={codeDiff}
+              revertible={revertible}
+              reverting={reverting}
+              onRevertFile={onRevertFile}
+              onRevertAll={onRevertAll}
+            />
           </CardContent>
         </Card>
       ) : (

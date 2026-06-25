@@ -147,6 +147,11 @@ export const api = {
       fetchApi<TaskDetail>(`/tasks/${id}/retry-pr`, { method: 'POST' }),
     retryCodegen: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/retry-codegen`, { method: 'POST' }),
+    revertCode: (id: string, paths?: string[]) =>
+      fetchApi<TaskDetail>(`/tasks/${id}/revert-code`, {
+        method: 'POST',
+        body: JSON.stringify({ paths }),
+      }),
     restart: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/restart`, { method: 'POST' }),
     restartByTaskId: (taskId: string) =>

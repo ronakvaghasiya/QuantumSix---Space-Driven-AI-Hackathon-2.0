@@ -141,6 +141,17 @@ export class TaskGitService {
     branchName: string,
     codeDiff: TaskCodeDiff | null,
   ): Promise<string | null> {
+    const message = this.buildCommitMessage(task, codeDiff);
+    return this.commitWorkingTree(task, branchName, message, codeDiff);
+  }
+
+  /** Commit current working tree on branch and push (e.g. after revert on an open MR) */
+  async commitWorkingTree(
+    task: Task,
+    branchName: string,
+    message: string,
+    codeDiff: TaskCodeDiff | null = null,
+  ): Promise<string | null> {
     const project = task.project;
     const clonePath = project?.clonePath;
     if (!project || !clonePath || !fs.existsSync(clonePath)) {
@@ -181,7 +192,7 @@ export class TaskGitService {
       }
 
       await git.add('.');
-      await git.commit(this.buildCommitMessage(task, codeDiff));
+      await git.commit(message);
 
       const remotes = await git.getRemotes(true);
       if (!remotes.find((r) => r.name === 'origin')) {
@@ -197,6 +208,37 @@ export class TaskGitService {
       this.logger.error(`Git commit/push failed: ${(error as Error).message}`);
       return null;
     }
+  }
+
+  async checkoutTaskBranch(
+    clonePath: string,
+    branchName: string,
+    defaultBranch = 'main',
+  ): Promise<void> {
+    const git = simpleGit(clonePath);
+    await git.fetch().catch(() => undefined);
+
+    const remoteBranches = await git.branch(['-r']);
+    const hasRemote = remoteBranches.all.some(
+      (b) => b === `origin/${branchName}` || b.endsWith(`/${branchName}`),
+    );
+
+    const local = await git.branchLocal();
+    if (local.all.includes(branchName)) {
+      await git.checkout(branchName);
+      if (hasRemote) {
+        await git.pull('origin', branchName).catch(() => undefined);
+      }
+      return;
+    }
+
+    if (hasRemote) {
+      await git.checkout(['-B', branchName, `origin/${branchName}`]);
+      return;
+    }
+
+    await git.checkout(defaultBranch).catch(() => undefined);
+    await git.checkoutLocalBranch(branchName);
   }
 
   async applyChanges(

@@ -38,6 +38,7 @@ import {
   formatDate,
 } from '@/lib/utils';
 import { colorAlpha } from '@/theme';
+import { BRAND } from '@/lib/brand';
 import Link from 'next/link';
 
 function projectIconColor(status: string): string {
@@ -165,7 +166,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Your SDLC pipeline at a glance — projects, tasks, QA, and pull requests"
+        subtitle={`${BRAND.tagline} — projects, tasks, QA, and merge requests at a glance`}
         action={
           <Button component={Link} href="/reports" variant="outlined" size="small" endIcon={<ArrowForwardIcon />}>
             Full Reports

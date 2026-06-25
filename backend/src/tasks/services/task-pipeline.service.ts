@@ -1133,4 +1133,138 @@ Make acceptance criteria precise enough that an engineer can verify them in sour
       };
     }
   }
+
+  async revertCodeChanges(taskId: string, paths?: string[]): Promise<void> {
+    const task = await this.loadTask(taskId);
+    if (!task) throw new Error('Task not found');
+
+    const runningBlocked = [
+      TaskStatus.VALIDATING,
+      TaskStatus.PLAYWRIGHT_EXECUTION,
+      TaskStatus.QA_VERIFICATION,
+      TaskStatus.SECURITY_SCAN,
+      TaskStatus.CREATING_PR,
+    ];
+    if (runningBlocked.includes(task.status)) {
+      throw new Error('Cannot revert while validation or PR creation is in progress');
+    }
+
+    const pr = await this.prRepo.findOne({ where: { taskId } });
+    if (pr && ['merged', 'closed'].includes(pr.reviewStatus)) {
+      throw new Error('Cannot revert — merge request is already merged or closed');
+    }
+
+    const codeDiff = await this.codeDiffRepo.findOne({ where: { taskId } });
+    if (!codeDiff?.fileEdits?.length) {
+      throw new Error('No code changes to revert');
+    }
+
+    let clonePath = task.project?.clonePath;
+    if ((!clonePath || !fs.existsSync(clonePath)) && task.project) {
+      clonePath = await this.indexing.ensureProjectCloned(task.project.id);
+    }
+    if (!clonePath) {
+      throw new Error('Repository clone not available');
+    }
+
+    const branchName =
+      pr?.branchName ||
+      `feature/repopilot-${task.taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
+    const defaultBranch = task.project?.defaultBranch || 'main';
+
+    if (pr?.prNumber || pr?.branchName) {
+      await this.taskGit.checkoutTaskBranch(clonePath, branchName, defaultBranch);
+    }
+
+    const normalize = (p: string) => p.replace(/^\.\//, '');
+    const targetPaths = paths?.length
+      ? new Set(paths.map(normalize))
+      : new Set(codeDiff.fileEdits.map((e) => normalize(e.path)));
+
+    const toRevert = codeDiff.fileEdits.filter((e) => targetPaths.has(normalize(e.path)));
+    if (!toRevert.length) {
+      throw new Error('No matching files to revert');
+    }
+
+    const revertResult = this.codeContext.revertEditsOnClone(
+      clonePath,
+      toRevert.map((e) => ({
+        path: e.path,
+        originalContent: e.originalContent ?? '',
+        newContent: e.newContent,
+        changeComments: e.changeComments || [],
+      })),
+    );
+    if (revertResult.errors.length > 0) {
+      throw new Error(`Revert failed: ${revertResult.errors.join(' · ')}`);
+    }
+
+    const remaining = codeDiff.fileEdits.filter((e) => !targetPaths.has(normalize(e.path)));
+    const hasOpenPr = !!(pr?.prNumber || pr?.branchName);
+
+    if (remaining.length === 0) {
+      await this.codeDiffRepo.delete({ taskId });
+      if (!hasOpenPr) {
+        await this.taskRepo.update(taskId, { status: TaskStatus.FAILED });
+        await this.setStep(taskId, TimelineStep.CODE_GENERATION, TimelineStepStatus.FAILED);
+        const codegenStep = await this.timelineRepo.findOne({
+          where: { taskId, step: TimelineStep.CODE_GENERATION },
+        });
+        if (codegenStep) {
+          codegenStep.message = 'All code changes reverted — retry code generation when ready';
+          await this.timelineRepo.save(codegenStep);
+        }
+      }
+    } else {
+      const diff = this.codeContext.buildUnifiedDiff(clonePath, remaining);
+      await this.codeDiffRepo.update(codeDiff.id, {
+        fileEdits: remaining,
+        diff: diff || null,
+        patchContent: diff || null,
+        filesToModify: remaining.map((e) => ({
+          path: e.path,
+          changes: e.changeComments || [],
+        })),
+      });
+    }
+
+    if (hasOpenPr) {
+      const revertMsg = [
+        `[RepoPilot] Revert ${task.taskId}`,
+        '',
+        `Reverted: ${revertResult.reverted.join(', ')}`,
+        remaining.length
+          ? `Remaining changes: ${remaining.map((e) => e.path).join(', ')}`
+          : 'All AI changes reverted on this branch.',
+        '',
+        `Requirement: ${task.requirement}`,
+      ].join('\n');
+
+      const updatedDiff = remaining.length
+        ? ({ ...codeDiff, fileEdits: remaining } as TaskCodeDiff)
+        : null;
+      const commitSha = await this.taskGit.commitWorkingTree(
+        task,
+        branchName,
+        revertMsg,
+        updatedDiff,
+      );
+      if (!commitSha) {
+        throw new Error('Revert applied locally but failed to push to GitLab branch');
+      }
+      await this.prRepo.update(pr!.id, { commitSha });
+    }
+
+    await this.audit.log('task', taskId, 'code_reverted', {
+      paths: revertResult.reverted,
+      remainingFiles: remaining.length,
+      pushedToBranch: hasOpenPr,
+      branchName: hasOpenPr ? branchName : null,
+    });
+    this.logger.log(
+      `Reverted ${revertResult.reverted.length} file(s) for task ${task.taskId}${
+        hasOpenPr ? ` and pushed to ${branchName}` : ''
+      }`,
+    );
+  }
 }

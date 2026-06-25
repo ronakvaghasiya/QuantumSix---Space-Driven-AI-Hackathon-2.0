@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from '@/theme';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { BRAND } from '@/lib/brand';
 import './globals.css';
 
 const roboto = Roboto({
@@ -22,8 +23,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'RepoPilot AI — SDLC Engineering Copilot',
-  description: 'AI-Powered Autonomous SDLC Platform by QuantumSix',
+  title: BRAND.fullTitle,
+  description: `${BRAND.description} by ${BRAND.organization}.`,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

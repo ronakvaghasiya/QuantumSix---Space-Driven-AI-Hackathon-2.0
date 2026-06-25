@@ -439,6 +439,45 @@ export class CodeContextService {
     return { applied, errors };
   }
 
+  /** Restore original file content on disk (undo AI edits) */
+  revertEditsOnClone(
+    clonePath: string,
+    edits: FileEditResult[],
+  ): { reverted: string[]; errors: string[] } {
+    const reverted: string[] = [];
+    const errors: string[] = [];
+
+    for (const edit of edits) {
+      const normalized = edit.path.replace(/^\.\//, '');
+      const full = path.join(clonePath, normalized);
+
+      if (edit.originalContent === undefined || edit.originalContent === null) {
+        errors.push(`${normalized}: no original content stored — cannot revert`);
+        continue;
+      }
+
+      try {
+        if (edit.originalContent === '' && !fs.existsSync(full)) {
+          reverted.push(normalized);
+          continue;
+        }
+
+        fs.mkdirSync(path.dirname(full), { recursive: true });
+        fs.writeFileSync(full, edit.originalContent, 'utf8');
+        const onDisk = fs.readFileSync(full, 'utf8');
+        if (onDisk !== edit.originalContent) {
+          errors.push(`${normalized}: disk content mismatch after revert`);
+        } else {
+          reverted.push(normalized);
+        }
+      } catch (err) {
+        errors.push(`${normalized}: ${(err as Error).message}`);
+      }
+    }
+
+    return { reverted, errors };
+  }
+
   /** Build read-only context from related files for LLM planning/editing */
   buildRelatedFileContext(
     clonePath: string,

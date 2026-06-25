@@ -40,7 +40,7 @@ export function RejectModal({ open, title, action, onClose, onConfirm }: RejectM
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth scroll="paper">
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>

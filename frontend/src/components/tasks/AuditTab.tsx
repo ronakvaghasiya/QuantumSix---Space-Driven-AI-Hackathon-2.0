@@ -38,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
   code_approve: 'Code Approved',
   code_reject: 'Code Rejected',
   code_request_changes: 'Code Changes Requested',
+  code_reverted: 'Code Changes Reverted',
   code_generation_completed: 'Code Generation Completed',
   qa_test_cases_regenerated: 'QA Test Cases Regenerated',
   security_scan_completed: 'Security Scan Completed',

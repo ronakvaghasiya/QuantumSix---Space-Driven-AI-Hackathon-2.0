@@ -15,7 +15,6 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
-  Chip,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -24,7 +23,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import MenuIcon from '@mui/icons-material/Menu';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TuneIcon from '@mui/icons-material/Tune';
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useState } from 'react';
+import { BRAND } from '@/lib/brand';
 
 const NAV_WIDTH = 280;
 
@@ -49,17 +49,10 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-const ALL_NAV_ITEMS = NAV_SECTIONS.flatMap((s) => s.items);
-
 function isNavActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   if (href === '/settings') return pathname === '/settings';
   return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function currentPageTitle(pathname: string): string {
-  const match = ALL_NAV_ITEMS.find((item) => isNavActive(pathname, item.href));
-  return match?.label || 'RepoPilot AI';
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -67,7 +60,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [open, setOpen] = useState(false);
-  const pageTitle = useMemo(() => currentPageTitle(pathname), [pathname]);
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -76,12 +68,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Avatar sx={{ bgcolor: 'primary.main', width: 42, height: 42 }}>
             <AutoAwesomeIcon fontSize="small" />
           </Avatar>
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" sx={{ lineHeight: 1.2, fontWeight: 700 }}>
-              RepoPilot AI
+              {BRAND.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              QuantumSix · Hackathon 2.0
+            <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600, display: 'block' }}>
+              {BRAND.tagline}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+              {BRAND.orgLine}
             </Typography>
           </Box>
         </Stack>
@@ -163,39 +158,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            py: 1.5,
-            borderBottom: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-          }}
-        >
-          {isMobile && (
-            <IconButton onClick={() => setOpen(true)} edge="start" size="small">
+        {isMobile && (
+          <Box
+            sx={{
+              px: 2,
+              py: 1,
+              borderBottom: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+            }}
+          >
+            <IconButton onClick={() => setOpen(true)} edge="start" size="small" aria-label="Open menu">
               <MenuIcon />
             </IconButton>
-          )}
-          <Typography variant="h6" sx={{ fontWeight: 700, flex: 1 }}>
-            {pageTitle}
-          </Typography>
-          {!isMobile && (
-            <Chip
-              label="SDLC Copilot"
-              size="small"
-              variant="outlined"
-              color="primary"
-              sx={{ fontWeight: 600 }}
-            />
-          )}
-        </Box>
+          </Box>
+        )}
 
         <Box
           component="main"

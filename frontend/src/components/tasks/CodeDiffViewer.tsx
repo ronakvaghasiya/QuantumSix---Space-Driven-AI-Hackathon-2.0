@@ -9,7 +9,10 @@ import {
   Typography,
   ToggleButton,
   ToggleButtonGroup,
+  Button,
+  Tooltip,
 } from '@mui/material';
+import UndoIcon from '@mui/icons-material/Undo';
 import { CodeDiffEntry } from '@/lib/api';
 
 type LineKind = 'unchanged' | 'removed' | 'added' | 'empty';
@@ -202,7 +205,17 @@ function DiffPane({
   );
 }
 
-function FileDiffView({ file }: { file: FileDiff }) {
+function FileDiffView({
+  file,
+  revertible,
+  onRevert,
+  reverting,
+}: {
+  file: FileDiff;
+  revertible?: boolean;
+  onRevert?: (path: string) => void;
+  reverting?: boolean;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = useMemo(
     () => buildSideBySideRows(file.original, file.modified),
@@ -221,7 +234,7 @@ function FileDiffView({ file }: { file: FileDiff }) {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
         <Typography variant="subtitle2" fontFamily="monospace">
           {file.path}
         </Typography>
@@ -230,6 +243,21 @@ function FileDiffView({ file }: { file: FileDiff }) {
         )}
         {stats.added > 0 && (
           <Chip label={`+${stats.added}`} size="small" color="success" variant="outlined" />
+        )}
+        {revertible && onRevert && (
+          <Tooltip title="Restore this file to its original content before AI changes">
+            <Button
+              size="small"
+              color="warning"
+              variant="outlined"
+              startIcon={<UndoIcon />}
+              disabled={reverting}
+              onClick={() => onRevert(file.path)}
+              sx={{ ml: 'auto' }}
+            >
+              Revert file
+            </Button>
+          </Tooltip>
         )}
       </Stack>
 
@@ -265,9 +293,19 @@ function FileDiffView({ file }: { file: FileDiff }) {
 
 interface CodeDiffViewerProps {
   codeDiff: CodeDiffEntry;
+  revertible?: boolean;
+  onRevertFile?: (path: string) => void;
+  onRevertAll?: () => void;
+  reverting?: boolean;
 }
 
-export function CodeDiffViewer({ codeDiff }: CodeDiffViewerProps) {
+export function CodeDiffViewer({
+  codeDiff,
+  revertible,
+  onRevertFile,
+  onRevertAll,
+  reverting,
+}: CodeDiffViewerProps) {
   const files = useMemo(() => resolveFileDiffs(codeDiff), [codeDiff]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [view, setView] = useState<'split' | 'unified'>('split');
@@ -285,7 +323,7 @@ export function CodeDiffViewer({ codeDiff }: CodeDiffViewerProps) {
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {files.map((f, i) => (
             <Chip
@@ -300,7 +338,20 @@ export function CodeDiffViewer({ codeDiff }: CodeDiffViewerProps) {
             />
           ))}
         </Stack>
-        <ToggleButtonGroup
+        <Stack direction="row" spacing={1} alignItems="center">
+          {revertible && onRevertAll && (files.length > 1 || files.length === 1) && (
+            <Button
+              size="small"
+              color="warning"
+              variant="outlined"
+              startIcon={<UndoIcon />}
+              disabled={reverting}
+              onClick={onRevertAll}
+            >
+              Revert all
+            </Button>
+          )}
+          <ToggleButtonGroup
           size="small"
           exclusive
           value={view}
@@ -309,10 +360,16 @@ export function CodeDiffViewer({ codeDiff }: CodeDiffViewerProps) {
           <ToggleButton value="split">Side by Side</ToggleButton>
           <ToggleButton value="unified">Unified</ToggleButton>
         </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       {view === 'split' ? (
-        <FileDiffView file={active} />
+        <FileDiffView
+          file={active}
+          revertible={revertible}
+          onRevert={onRevertFile}
+          reverting={reverting}
+        />
       ) : (
         codeDiff.diff ? (
           <Box
@@ -331,7 +388,12 @@ export function CodeDiffViewer({ codeDiff }: CodeDiffViewerProps) {
             {codeDiff.diff}
           </Box>
         ) : (
-          <FileDiffView file={active} />
+          <FileDiffView
+            file={active}
+            revertible={revertible}
+            onRevert={onRevertFile}
+            reverting={reverting}
+          />
         )
       )}
 

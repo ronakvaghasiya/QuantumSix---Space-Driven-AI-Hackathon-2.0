@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { TaskTimeline } from './entities/task-timeline.entity';
-import { CreateTaskDto, UploadTasksDto, ApprovalDto } from './dto/task.dto';
+import { CreateTaskDto, UploadTasksDto, ApprovalDto, RevertCodeDto } from './dto/task.dto';
 import { TaskStatus, TimelineStep, TimelineStepStatus, RiskLevel } from '../common/enums/task.enum';
 import { N8nService } from '../webhooks/n8n.service';
 import { TaskPipelineService } from './services/task-pipeline.service';
@@ -326,6 +326,16 @@ export class TasksService {
     task.status = TaskStatus.GENERATING_CODE;
     await this.taskRepo.save(task);
     this.triggerCodeGeneration(task);
+    return this.findOne(id);
+  }
+
+  async revertCode(id: string, dto: RevertCodeDto): Promise<Task> {
+    await this.findOne(id);
+    try {
+      await this.pipeline.revertCodeChanges(id, dto.paths);
+    } catch (error) {
+      throw new BadRequestException((error as Error).message || 'Revert failed');
+    }
     return this.findOne(id);
   }
 

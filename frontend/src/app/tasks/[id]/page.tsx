@@ -39,6 +39,7 @@ import { AuditTab } from '@/components/tasks/AuditTab';
 import { PullRequestView } from '@/components/tasks/PullRequestView';
 import { SimilarTasksPanel, RiskBreakdownCard } from '@/components/tasks/IntelligencePanels';
 import { TaskProgressTimeline } from '@/components/tasks/TaskProgressTimeline';
+import { ApprovalActionsBar } from '@/components/tasks/ApprovalActionsBar';
 import { api, TaskDetail, RepositoryIntelligenceResult, SimilarTaskResult, RiskAssessment } from '@/lib/api';
 import { formatDate, resolveActiveAgentLabel, tabIndexForTimelineStep, resolveActiveTimelineStep, ACTIVE_TASK_STATUSES } from '@/lib/utils';
 import { RepositoryIntelligenceView } from '@/components/tasks/RepositoryIntelligenceView';
@@ -61,6 +62,7 @@ export default function TaskDetailPage() {
   const [fixingLint, setFixingLint] = useState(false);
   const [retryingPr, setRetryingPr] = useState(false);
   const [retryingCodegen, setRetryingCodegen] = useState(false);
+  const [revertingCode, setRevertingCode] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [rejectModal, setRejectModal] = useState<{
     open: boolean;
@@ -112,14 +114,18 @@ export default function TaskDetailPage() {
     if (isRunning && stepChanged) {
       lastAutoStepRef.current = activeStep;
       setFocusedPipelineStep(activeStep);
-      setTab(tabIndexForTimelineStep(activeStep, task.status));
+      if (activeStep !== 'approval') {
+        setTab(tabIndexForTimelineStep(activeStep, task.status));
+      }
     }
   }, [task?.timeline, task?.status]);
 
   const handlePipelineStepClick = (step: string) => {
     if (!task) return;
     setFocusedPipelineStep(step);
-    setTab(tabIndexForTimelineStep(step, task.status));
+    if (step !== 'approval') {
+      setTab(tabIndexForTimelineStep(step, task.status));
+    }
   };
 
   useEffect(() => {
@@ -164,6 +170,28 @@ export default function TaskDetailPage() {
     }
   };
 
+  const handleRevertCode = async (paths?: string[]) => {
+    const openPr = task?.pullRequests?.[0];
+    const hasOpenPr = openPr && ['open', 'approved', 'draft'].includes(openPr.reviewStatus);
+    const label = paths?.length === 1
+      ? `Revert changes in ${paths[0]}?`
+      : 'Revert all AI code changes for this task?';
+    const prNote = hasOpenPr
+      ? ' The open GitLab merge request will be updated with a new commit.'
+      : '';
+    if (!window.confirm(`${label} Original file content will be restored.${prNote}`)) {
+      return;
+    }
+    setRevertingCode(true);
+    try {
+      const updated = await api.tasks.revertCode(id, paths);
+      setTask(updated);
+      setTab(hasOpenPr ? 5 : 3);
+    } finally {
+      setRevertingCode(false);
+    }
+  };
+
   const handleRestart = async () => {
     if (!window.confirm(`Restart ${task?.taskId} from the beginning? All progress will be cleared.`)) {
       return;
@@ -201,6 +229,12 @@ export default function TaskDetailPage() {
   const validationPassed = validation && validation.lintStatus !== 'fail';
   const canRetryPr = !!codeDiff && !pr && validationPassed && ['failed', 'qa_verification', 'validating'].includes(task.status);
   const canRetryCodegen = task.status === 'failed' && !codeDiff;
+  const canRevertCode =
+    !!codeDiff?.fileEdits?.length &&
+    (!pr || ['open', 'approved', 'draft'].includes(pr.reviewStatus)) &&
+    !['validating', 'playwright_execution', 'qa_verification', 'security_scan', 'creating_pr'].includes(
+      task.status,
+    );
   const failedStep = (task.timeline || []).find((s) => s.status === 'failed');
   const codegenFailureMessage =
     failedStep?.message ||
@@ -274,6 +308,22 @@ export default function TaskDetailPage() {
             focusedStep={focusedPipelineStep}
             onStepClick={handlePipelineStepClick}
           />
+          {isAnalysisApproval && (
+            <ApprovalActionsBar
+              type="analysis"
+              onApprove={() => handleApproval('analysis', 'approve')}
+              onReject={() => openReject('analysis', 'reject')}
+              onRequestChanges={() => openReject('analysis', 'request_changes')}
+            />
+          )}
+          {isCodeApproval && !validation && (
+            <ApprovalActionsBar
+              type="code"
+              onApprove={() => handleApproval('code', 'approve')}
+              onReject={() => openReject('code', 'reject')}
+              onRequestChanges={() => openReject('code', 'request_changes')}
+            />
+          )}
           {canRetryCodegen && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Alert severity="error">
@@ -411,7 +461,13 @@ export default function TaskDetailPage() {
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
                   VS Code style — original (left) vs modified (right)
                 </Typography>
-                <CodeDiffViewer codeDiff={codeDiff} />
+                <CodeDiffViewer
+                  codeDiff={codeDiff}
+                  revertible={canRevertCode}
+                  reverting={revertingCode}
+                  onRevertFile={(path) => handleRevertCode([path])}
+                  onRevertAll={() => handleRevertCode()}
+                />
 
                 {isCodeApproval && !validation && (
                   <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
@@ -517,6 +573,10 @@ export default function TaskDetailPage() {
                 validation={validation}
                 taskId={id}
                 onUpdated={load}
+                revertible={canRevertCode}
+                reverting={revertingCode}
+                onRevertFile={(path) => handleRevertCode([path])}
+                onRevertAll={() => handleRevertCode()}
               />
             ) : codeDiff ? (
               <Stack spacing={2}>

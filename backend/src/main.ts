@@ -20,8 +20,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('SDLC Platform API')
-    .setDescription('AI-Powered Autonomous SDLC Platform')
+    .setTitle('RepoPilot AI API')
+    .setDescription('SDLC Engineering Copilot — autonomous analysis, code generation, validation, and GitLab MRs')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -30,7 +30,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`SDLC Platform API running on http://localhost:${port}`);
+  console.log(`RepoPilot AI API running on http://localhost:${port}`);
   console.log(`Swagger docs at http://localhost:${port}/docs`);
 }
 

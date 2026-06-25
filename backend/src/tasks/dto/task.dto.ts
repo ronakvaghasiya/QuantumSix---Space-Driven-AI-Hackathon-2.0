@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RiskLevel } from '../../common/enums/task.enum';
 
@@ -45,4 +45,15 @@ export class ApprovalDto {
   @IsOptional()
   @IsString()
   reason?: string;
+}
+
+export class RevertCodeDto {
+  @ApiPropertyOptional({
+    description: 'File paths to revert (relative). Omit to revert all changed files.',
+    example: ['components/Common/SidePreview/index.js'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  paths?: string[];
 }
