@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Card,
@@ -40,7 +40,7 @@ import { PullRequestView } from '@/components/tasks/PullRequestView';
 import { SimilarTasksPanel, RiskBreakdownCard } from '@/components/tasks/IntelligencePanels';
 import { TaskProgressTimeline } from '@/components/tasks/TaskProgressTimeline';
 import { api, TaskDetail, RepositoryIntelligenceResult, SimilarTaskResult, RiskAssessment } from '@/lib/api';
-import { formatDate, resolveActiveAgentLabel } from '@/lib/utils';
+import { formatDate, resolveActiveAgentLabel, tabIndexForTimelineStep, resolveActiveTimelineStep, ACTIVE_TASK_STATUSES } from '@/lib/utils';
 import { RepositoryIntelligenceView } from '@/components/tasks/RepositoryIntelligenceView';
 import { AgentAnalysisView } from '@/components/tasks/AgentAnalysisView';
 import Link from 'next/link';
@@ -54,6 +54,8 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
+  const [focusedPipelineStep, setFocusedPipelineStep] = useState<string | null>(null);
+  const lastAutoStepRef = useRef<string | null>(null);
   const [repoIntel, setRepoIntel] = useState<RepositoryIntelligenceResult | null>(null);
   const [intelLoading, setIntelLoading] = useState(false);
   const [fixingLint, setFixingLint] = useState(false);
@@ -90,17 +92,35 @@ export default function TaskDetailPage() {
 
   useEffect(() => {
     if (!task) return;
-    const active = [
-      'pending', 'analyzing', 'generating_tests', 'generating_code',
-      'validating', 'testing', 'playwright_execution', 'qa_verification',
-      'security_scan', 'creating_pr',
-    ].includes(task.status);
+    const active = ACTIVE_TASK_STATUSES.includes(task.status);
     if (!active) return;
     const timer = setInterval(() => {
       api.tasks.get(id).then(setTask).catch(() => undefined);
     }, 3000);
     return () => clearInterval(timer);
   }, [id, task?.status]);
+
+  useEffect(() => {
+    if (!task?.timeline?.length) return;
+
+    const activeStep = resolveActiveTimelineStep(task.timeline, task.status);
+    if (!activeStep) return;
+
+    const isRunning = ACTIVE_TASK_STATUSES.includes(task.status);
+    const stepChanged = activeStep !== lastAutoStepRef.current;
+
+    if (isRunning && stepChanged) {
+      lastAutoStepRef.current = activeStep;
+      setFocusedPipelineStep(activeStep);
+      setTab(tabIndexForTimelineStep(activeStep, task.status));
+    }
+  }, [task?.timeline, task?.status]);
+
+  const handlePipelineStepClick = (step: string) => {
+    if (!task) return;
+    setFocusedPipelineStep(step);
+    setTab(tabIndexForTimelineStep(step, task.status));
+  };
 
   useEffect(() => {
     if (tab !== 1 || !task?.projectId || task.project?.status !== 'completed') return;
@@ -181,6 +201,10 @@ export default function TaskDetailPage() {
   const validationPassed = validation && validation.lintStatus !== 'fail';
   const canRetryPr = !!codeDiff && !pr && validationPassed && ['failed', 'qa_verification', 'validating'].includes(task.status);
   const canRetryCodegen = task.status === 'failed' && !codeDiff;
+  const failedStep = (task.timeline || []).find((s) => s.status === 'failed');
+  const codegenFailureMessage =
+    failedStep?.message ||
+    'Code generation did not produce any file changes. Click Retry to run again.';
 
   return (
     <>
@@ -244,11 +268,16 @@ export default function TaskDetailPage() {
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
             Pipeline Progress
           </Typography>
-          <TaskProgressTimeline timeline={task.timeline || []} taskStatus={task.status} />
+          <TaskProgressTimeline
+            timeline={task.timeline || []}
+            taskStatus={task.status}
+            focusedStep={focusedPipelineStep}
+            onStepClick={handlePipelineStepClick}
+          />
           {canRetryCodegen && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Alert severity="error">
-                Code generation failed. The label replace logic has been fixed — click Retry to run again.
+                {codegenFailureMessage}
               </Alert>
               <Button
                 variant="contained"

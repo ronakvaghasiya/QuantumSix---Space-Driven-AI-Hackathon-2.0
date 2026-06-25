@@ -151,6 +151,70 @@ export function timelineAgentForStep(step: string): string {
   return TIMELINE_STEP_META[step]?.agent || '—';
 }
 
+/** Bottom tab index for each pipeline step (Overview=0 … Audit=6) */
+export const TIMELINE_STEP_TAB_INDEX: Record<string, number> = {
+  requirement_analysis: 0,
+  repository_analysis: 1,
+  impact_analysis: 1,
+  test_generation: 2,
+  approval: 1,
+  code_generation: 3,
+  validation: 4,
+  qa: 4,
+  pr: 5,
+};
+
+export function tabIndexForTimelineStep(step: string, taskStatus?: string): number {
+  if (step === 'approval') {
+    return taskStatus === 'code_approval_required' ? 3 : 1;
+  }
+  return TIMELINE_STEP_TAB_INDEX[step] ?? 0;
+}
+
+export function resolveActiveTimelineStep(
+  timeline: { step: string; status: string }[],
+  taskStatus: string,
+): string | null {
+  const running = timeline.find((s) => s.status === 'running');
+  if (running) return running.step;
+
+  if (taskStatus === 'analysis_approval_required') return 'approval';
+  if (taskStatus === 'code_approval_required') return 'approval';
+
+  const statusToStep: Record<string, string> = {
+    pending: 'requirement_analysis',
+    analyzing: 'requirement_analysis',
+    generating_tests: 'test_generation',
+    generating_code: 'code_generation',
+    validating: 'validation',
+    playwright_execution: 'qa',
+    qa_verification: 'qa',
+    security_scan: 'pr',
+    creating_pr: 'pr',
+    pr_created: 'pr',
+    completed: 'pr',
+  };
+  if (statusToStep[taskStatus]) return statusToStep[taskStatus];
+
+  const failed = [...timeline].reverse().find((s) => s.status === 'failed');
+  return failed?.step ?? null;
+}
+
+export const ACTIVE_TASK_STATUSES = [
+  'pending',
+  'analyzing',
+  'generating_tests',
+  'generating_code',
+  'validating',
+  'testing',
+  'playwright_execution',
+  'qa_verification',
+  'security_scan',
+  'creating_pr',
+  'analysis_approval_required',
+  'code_approval_required',
+];
+
 export function resolveActiveAgentLabel(
   timeline: { step: string; status: string }[],
   taskStatus: string,

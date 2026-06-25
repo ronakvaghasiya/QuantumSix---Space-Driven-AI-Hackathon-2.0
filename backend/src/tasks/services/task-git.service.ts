@@ -45,11 +45,9 @@ export class TaskGitService {
     if (!clonePath || !fs.existsSync(clonePath)) return null;
 
     const defaultBranch = project.defaultBranch || 'main';
-    const git = simpleGit(clonePath);
+    await this.resetCloneToDefault(clonePath, defaultBranch);
 
-    await git.fetch().catch(() => undefined);
-    await git.checkout(defaultBranch);
-    await git.pull('origin', defaultBranch).catch(() => undefined);
+    const git = simpleGit(clonePath);
 
     const branches = await git.branchLocal();
     if (branches.all.includes(branchName)) {
@@ -61,6 +59,17 @@ export class TaskGitService {
 
     await this.applyChanges(clonePath, task, codeDiff);
     return clonePath;
+  }
+
+  /** Discard local edits from prior tasks — start from clean default branch */
+  async resetCloneToDefault(clonePath: string, defaultBranch = 'main'): Promise<void> {
+    const git = simpleGit(clonePath);
+    await git.fetch().catch(() => undefined);
+    await git.checkout(defaultBranch).catch(() => undefined);
+    await git.reset(['--hard', defaultBranch]).catch(() => undefined);
+    await git.pull('origin', defaultBranch).catch(() => undefined);
+    await git.clean('f', ['-d']).catch(() => undefined);
+    this.logger.log(`Reset clone to clean ${defaultBranch} at ${clonePath}`);
   }
 
   buildCommitMessage(task: Task, codeDiff: TaskCodeDiff | null): string {

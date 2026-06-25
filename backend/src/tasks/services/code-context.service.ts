@@ -234,6 +234,13 @@ export class CodeContextService {
 
     const files = this.searchFilesContaining(clonePath, intent.from, hintedPaths, 500);
     if (!files.length) {
+      const unresolved = this.scanRepoForUnresolvedText(clonePath, intent.from, intent.to, []);
+      if (unresolved.length === 0) {
+        const idempotent = this.buildIdempotentReplaceEdits(clonePath, intent, hintedPaths);
+        if (idempotent.edits.length > 0) {
+          return idempotent;
+        }
+      }
       return {
         edits: [],
         plan: `Search repository for "${intent.from}" and replace with "${intent.to}"`,
@@ -358,6 +365,50 @@ export class CodeContextService {
       }
     });
     return unresolved;
+  }
+
+  /** Target text already present and source text gone — build diff from synthetic baseline */
+  private buildIdempotentReplaceEdits(
+    clonePath: string,
+    intent: ReplaceIntent,
+    hintedPaths: string[],
+  ): AccurateEditResult {
+    const targetFiles = this.searchFilesContaining(clonePath, intent.to, hintedPaths, 50);
+    const edits: FileEditResult[] = [];
+
+    for (const filePath of targetFiles) {
+      const normalized = filePath.replace(/^\.\//, '');
+      const full = path.join(clonePath, normalized);
+      if (!fs.existsSync(full)) continue;
+
+      const newContent = fs.readFileSync(full, 'utf8');
+      if (!newContent.includes(intent.to)) continue;
+
+      const reverted = this.applyReplacementsInContent(newContent, intent.to, intent.from);
+      if (reverted.count <= 0) continue;
+
+      edits.push({
+        path: normalized,
+        originalContent: reverted.content,
+        newContent,
+        changeComments: [
+          `Requirement already satisfied — "${intent.to}" present in ${normalized}`,
+        ],
+      });
+    }
+
+    const plan = [
+      `Requirement: replace "${intent.from}" with "${intent.to}"`,
+      `Status: already applied in repository (${edits.length} file(s))`,
+    ].join('\n');
+
+    return {
+      edits,
+      plan,
+      verified: edits.length > 0,
+      verificationErrors: edits.length ? [] : [`"${intent.to}" not found in expected files`],
+      strategy: 'deterministic_replace',
+    };
   }
 
   /** Write edits to clone and confirm files on disk match expected content */

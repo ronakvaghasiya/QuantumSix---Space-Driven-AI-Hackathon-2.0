@@ -90,15 +90,28 @@ function dotStyles(status: string, selected: boolean) {
 interface TaskProgressTimelineProps {
   timeline: TimelineEntry[];
   taskStatus: string;
+  focusedStep?: string | null;
+  onStepClick?: (step: string) => void;
 }
 
-export function TaskProgressTimeline({ timeline, taskStatus }: TaskProgressTimelineProps) {
+export function TaskProgressTimeline({
+  timeline,
+  taskStatus,
+  focusedStep: focusedStepProp,
+  onStepClick,
+}: TaskProgressTimelineProps) {
   const byStep = Object.fromEntries(timeline.map((t) => [t.step, t]));
   const ordered = STEP_ORDER.map((step) => byStep[step]).filter(Boolean) as TimelineEntry[];
   const failedStep = [...ordered].reverse().find((s) => s.status === 'failed');
   const runningStep = ordered.find((s) => s.status === 'running');
 
-  const [focusedStep, setFocusedStep] = useState<string | null>(null);
+  const [internalFocusedStep, setInternalFocusedStep] = useState<string | null>(null);
+  const focusedStep = focusedStepProp ?? internalFocusedStep;
+
+  const setFocusedStep = (step: string) => {
+    if (onStepClick) onStepClick(step);
+    else setInternalFocusedStep(step);
+  };
 
   const completedCount = useMemo(
     () => ordered.filter((s, i) => resolveDisplayStatus(s, i, ordered) === 'completed').length,

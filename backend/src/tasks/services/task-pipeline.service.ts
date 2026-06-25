@@ -300,6 +300,13 @@ Make acceptance criteria precise enough that an engineer can verify them in sour
         throw new Error('Repository not cloned — re-index the project before code generation');
       }
 
+      if (task.project) {
+        await this.taskGit.resetCloneToDefault(
+          clonePath,
+          task.project.defaultBranch || 'main',
+        );
+      }
+
       const indexedHints = task.project
         ? await this.findIndexedFileHints(task.project.id, task.requirement, replaceIntent)
         : [];
