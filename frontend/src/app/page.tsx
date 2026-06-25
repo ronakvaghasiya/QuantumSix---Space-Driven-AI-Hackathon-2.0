@@ -166,7 +166,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        subtitle={`${BRAND.tagline} — projects, tasks, QA, and merge requests at a glance`}
+        subtitle={`${BRAND.tagline} Projects, tasks, QA, and merge requests at a glance.`}
         action={
           <Button component={Link} href="/reports" variant="outlined" size="small" endIcon={<ArrowForwardIcon />}>
             Full Reports

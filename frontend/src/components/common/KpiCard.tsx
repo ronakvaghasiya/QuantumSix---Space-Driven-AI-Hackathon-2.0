@@ -16,7 +16,16 @@ export function KpiCard({ title, value, icon, color = 'primary.main', loading }:
   const resolved = resolveThemeColor(color);
 
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card
+      sx={{
+        height: '100%',
+        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: (t) => t.shadows[4],
+        },
+      }}
+    >
       <CardContent sx={{ py: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
           <Box sx={{ minWidth: 0 }}>

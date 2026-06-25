@@ -15,7 +15,6 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
-  Chip,
   Button,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -64,20 +63,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [open, setOpen] = useState(false);
-  const { user, platform, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ px: 2.5, py: 2.5, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ px: 2.5, py: 2.5, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 42, height: 42 }}>
+          <Avatar
+            sx={{
+              bgcolor: 'primary.main',
+              width: 42,
+              height: 42,
+              transition: 'transform 0.25s ease',
+              '&:hover': { transform: 'scale(1.05)' },
+            }}
+          >
             <AutoAwesomeIcon fontSize="small" />
           </Avatar>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" sx={{ lineHeight: 1.2, fontWeight: 700 }}>
               {BRAND.name}
             </Typography>
-            <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600, display: 'block' }}>
+            <Typography
+              variant="caption"
+              color="primary.main"
+              sx={{ fontWeight: 600, display: 'block', lineHeight: 1.35 }}
+            >
               {BRAND.tagline}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
@@ -104,10 +115,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => setOpen(false)}
                     sx={{
                       py: 0.85,
+                      borderRadius: 1.5,
+                      mb: 0.25,
                       color: active ? 'primary.main' : 'text.secondary',
                       bgcolor: active ? 'rgba(0, 167, 111, 0.08)' : 'transparent',
+                      transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
                       '&:hover': {
                         bgcolor: active ? 'rgba(0, 167, 111, 0.12)' : 'action.hover',
+                        transform: 'translateX(2px)',
                       },
                       ...(active && {
                         '& .MuiListItemIcon-root': { color: 'primary.main' },
@@ -132,23 +147,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ))}
       </Box>
 
-      <Box sx={{ px: 2, py: 2, borderTop: 1, borderColor: 'divider' }}>
+      <Box sx={{ px: 2, py: 2, borderTop: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Stack spacing={1}>
           {user && (
             <Box>
               <Typography variant="subtitle2" fontWeight={700}>
                 {user.name}
               </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography variant="caption" color="text.secondary" display="block" noWrap>
                 {user.email}
               </Typography>
-              {platform && (
-                <Chip
-                  label={`${platform.clientPlatform || 'client'} · server ${platform.serverOs}`}
-                  size="small"
-                  sx={{ mt: 1, fontSize: '0.65rem' }}
-                />
-              )}
             </Box>
           )}
           <Button
@@ -156,7 +164,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             color="inherit"
             startIcon={<LogoutIcon fontSize="small" />}
             onClick={logout}
-            sx={{ justifyContent: 'flex-start' }}
+            sx={{
+              justifyContent: 'flex-start',
+              transition: 'color 0.2s ease, background-color 0.2s ease',
+            }}
           >
             Sign out
           </Button>
@@ -166,12 +177,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
       {isMobile ? (
         <Drawer
           open={open}
           onClose={() => setOpen(false)}
-          PaperProps={{ sx: { width: NAV_WIDTH } }}
+          PaperProps={{
+            sx: {
+              width: NAV_WIDTH,
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important',
+            },
+          }}
         >
           {sidebar}
         </Drawer>
@@ -179,21 +195,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Box
           component="nav"
           sx={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            zIndex: 1200,
             width: NAV_WIDTH,
+            height: '100vh',
             flexShrink: 0,
             borderRight: 1,
             borderColor: 'divider',
             bgcolor: 'background.paper',
-            position: 'sticky',
-            top: 0,
-            height: '100vh',
+            overflow: 'hidden',
           }}
         >
           {sidebar}
         </Box>
       )}
 
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          ml: isMobile ? 0 : `${NAV_WIDTH}px`,
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
         {isMobile && (
           <Box
             sx={{
@@ -202,9 +231,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               borderBottom: 1,
               borderColor: 'divider',
               bgcolor: 'background.paper',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
+              flexShrink: 0,
             }}
           >
             <IconButton onClick={() => setOpen(true)} edge="start" size="small" aria-label="Open menu">
@@ -217,11 +244,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           component="main"
           sx={{
             flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
             p: { xs: 2, md: 3 },
             bgcolor: 'background.default',
           }}
         >
-          <Box sx={{ maxWidth: 1440, mx: 'auto', width: '100%' }}>{children}</Box>
+          <Box
+            key={pathname}
+            className="page-enter"
+            sx={{ maxWidth: 1440, mx: 'auto', width: '100%' }}
+          >
+            {children}
+          </Box>
         </Box>
       </Box>
     </Box>
