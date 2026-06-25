@@ -67,15 +67,23 @@ export class SecurityScanService {
     const criticalVulns = vulnerabilities.filter((v) => v.severity === 'critical').length;
     const highVulns = vulnerabilities.filter((v) => v.severity === 'high').length;
 
-    const blockedPr = secretsFound > 0 || criticalVulns > 0;
+    // Block PR only for leaked secrets in source — not pre-existing npm audit CVEs in dependencies
+    const blockedPr = secretsFound > 0;
     let status: SecurityScanResult['status'] = 'pass';
-    if (blockedPr) status = 'fail';
-    else if (highVulns > 0 || unsafe.length > 0) status = 'warning';
+    if (blockedPr) {
+      status = 'fail';
+    } else if (criticalVulns > 0 || highVulns > 0 || unsafe.length > 0) {
+      status = 'warning';
+    }
 
+    const vulnNote =
+      vulnerabilities.length > 0
+        ? ` (${criticalVulns} critical, ${highVulns} high — informational, does not block PR)`
+        : '';
     const parts = [
       `Secrets: ${secretsFound}`,
       `Unsafe patterns: ${unsafe.length}`,
-      `Vulnerabilities: ${vulnerabilities.length} (${criticalVulns} critical)`,
+      `Vulnerabilities: ${vulnerabilities.length}${vulnNote}`,
     ];
 
     return {

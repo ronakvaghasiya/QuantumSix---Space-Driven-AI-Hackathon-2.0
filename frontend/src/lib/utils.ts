@@ -43,6 +43,20 @@ export const RISK_COLORS: Record<string, 'success' | 'warning' | 'error' | 'defa
   critical: 'error',
 };
 
+export const PR_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  approved: 'Approved',
+  merged: 'Merged',
+  closed: 'Closed',
+};
+
+export const PR_STATUS_COLORS: Record<string, 'success' | 'primary' | 'default' | 'info' | 'warning' | 'error'> = {
+  open: 'success',
+  approved: 'info',
+  merged: 'primary',
+  closed: 'default',
+};
+
 export const PROJECT_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   indexing: 'Indexing',
@@ -62,12 +76,99 @@ export const TIMELINE_LABELS: Record<string, string> = {
   repository_analysis: 'Repository Analysis',
   impact_analysis: 'Impact Analysis',
   test_generation: 'Test Generation',
-  approval: 'Approval',
+  approval: 'Your Approval',
   code_generation: 'Code Generation',
   validation: 'Validation',
-  qa: 'QA',
-  pr: 'PR',
+  qa: 'QA & Playwright',
+  pr: 'GitLab PR',
 };
+
+export interface TimelineStepMeta {
+  order: number;
+  agent: string;
+  agentKey: string | null;
+  what: string;
+}
+
+export const TIMELINE_STEP_META: Record<string, TimelineStepMeta> = {
+  requirement_analysis: {
+    order: 1,
+    agent: 'Requirement Agent',
+    agentKey: 'requirement_analysis',
+    what: 'AI reads your task and writes acceptance criteria and user stories.',
+  },
+  repository_analysis: {
+    order: 2,
+    agent: 'Repository Agent',
+    agentKey: 'repository_intelligence',
+    what: 'Searches the indexed codebase for files related to your change.',
+  },
+  impact_analysis: {
+    order: 3,
+    agent: 'Impact Agent',
+    agentKey: 'impact_analysis',
+    what: 'Checks which areas might break (dependencies, APIs).',
+  },
+  test_generation: {
+    order: 4,
+    agent: 'Test Agent',
+    agentKey: 'test_generation',
+    what: 'Generates QA test cases for manual review.',
+  },
+  approval: {
+    order: 5,
+    agent: 'You (Human)',
+    agentKey: null,
+    what: 'You approve or reject the analysis and tests before code is written.',
+  },
+  code_generation: {
+    order: 6,
+    agent: 'Code Agent',
+    agentKey: 'code_generation',
+    what: 'AI writes code changes based on the approved plan.',
+  },
+  validation: {
+    order: 7,
+    agent: 'Validation Agent',
+    agentKey: 'validation',
+    what: 'Clones the repo and runs ESLint, Prettier, build, and unit tests.',
+  },
+  qa: {
+    order: 8,
+    agent: 'QA Agent',
+    agentKey: 'qa',
+    what: 'Runs Playwright and regression checks on the changes.',
+  },
+  pr: {
+    order: 9,
+    agent: 'GitLab Agent',
+    agentKey: 'github',
+    what: 'Commits the branch and opens a GitLab Merge Request.',
+  },
+};
+
+export function timelineAgentForStep(step: string): string {
+  return TIMELINE_STEP_META[step]?.agent || '—';
+}
+
+export function resolveActiveAgentLabel(
+  timeline: { step: string; status: string }[],
+  taskStatus: string,
+): string {
+  const running = timeline.find((s) => s.status === 'running');
+  if (running) return `${timelineAgentForStep(running.step)} (working now)`;
+
+  if (taskStatus === 'analysis_approval_required' || taskStatus === 'code_approval_required') {
+    return 'Waiting for your approval';
+  }
+
+  const failed = [...timeline].reverse().find((s) => s.status === 'failed');
+  if (failed) return `Failed at: ${timelineAgentForStep(failed.step)}`;
+
+  if (taskStatus === 'completed' || taskStatus === 'pr_created') return 'GitLab Agent (done)';
+
+  return '—';
+}
 
 export const AGENT_LABELS: Record<string, string> = {
   requirement_analysis: 'Requirement Analysis Agent',

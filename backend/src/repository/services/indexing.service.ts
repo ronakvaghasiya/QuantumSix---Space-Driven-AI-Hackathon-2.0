@@ -397,6 +397,28 @@ export class IndexingService implements OnModuleInit {
     }
   }
 
+  /** Clone or refresh repo on disk — used before validation when clonePath is missing. */
+  async ensureProjectCloned(projectId: string): Promise<string | null> {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) return null;
+
+    const reposPath = process.env.REPOS_BASE_PATH || '/tmp/sdlc-repos';
+    const clonePath = project.clonePath && fs.existsSync(project.clonePath)
+      ? project.clonePath
+      : path.join(reposPath, project.id);
+
+    try {
+      await this.cloneRepository(project, clonePath);
+      if (project.clonePath !== clonePath) {
+        await this.projectRepo.update(project.id, { clonePath });
+      }
+      return clonePath;
+    } catch (err) {
+      this.logger.error(`ensureProjectCloned failed for ${projectId}: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
   private async cloneRepository(project: Project, clonePath: string): Promise<void> {
     const reposPath = path.dirname(clonePath);
     if (!fs.existsSync(reposPath)) {

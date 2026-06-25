@@ -20,16 +20,15 @@ import {
   ListItemText,
   Skeleton,
   LinearProgress,
+  Alert,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
-import ErrorIcon from '@mui/icons-material/Error';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import EditIcon from '@mui/icons-material/Edit';
 import BuildIcon from '@mui/icons-material/Build';
+import MergeTypeIcon from '@mui/icons-material/MergeType';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { PageHeader } from '@/components/common/KpiCard';
 import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { ValidationDetailsView } from '@/components/tasks/ValidationDetailsView';
@@ -37,22 +36,17 @@ import { CodeDiffViewer } from '@/components/tasks/CodeDiffViewer';
 import { QaTestCasesView } from '@/components/tasks/QaTestCasesView';
 import { RejectModal } from '@/components/tasks/RejectModal';
 import { AuditTab } from '@/components/tasks/AuditTab';
-import { MrActionButtons, prStatusColor } from '@/components/tasks/MrActionButtons';
+import { PullRequestView } from '@/components/tasks/PullRequestView';
 import { SimilarTasksPanel, RiskBreakdownCard } from '@/components/tasks/IntelligencePanels';
+import { TaskProgressTimeline } from '@/components/tasks/TaskProgressTimeline';
 import { api, TaskDetail, RepositoryIntelligenceResult, SimilarTaskResult, RiskAssessment } from '@/lib/api';
-import { TIMELINE_LABELS, formatDate, PROJECT_STATUS_LABELS, agentLabel } from '@/lib/utils';
-import { DependencyGraphView } from '@/components/repository/DependencyGraphView';
+import { formatDate, resolveActiveAgentLabel } from '@/lib/utils';
+import { RepositoryIntelligenceView } from '@/components/tasks/RepositoryIntelligenceView';
+import { AgentAnalysisView } from '@/components/tasks/AgentAnalysisView';
 import Link from 'next/link';
 
 function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
   return value === index ? <Box sx={{ pt: 3 }}>{children}</Box> : null;
-}
-
-function TimelineIcon({ status }: { status: string }) {
-  if (status === 'completed') return <CheckCircleIcon color="success" />;
-  if (status === 'running') return <AutorenewIcon color="info" sx={{ animation: 'spin 1s linear infinite', '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } } }} />;
-  if (status === 'failed') return <ErrorIcon color="error" />;
-  return <RadioButtonUncheckedIcon color="disabled" />;
 }
 
 export default function TaskDetailPage() {
@@ -63,6 +57,9 @@ export default function TaskDetailPage() {
   const [repoIntel, setRepoIntel] = useState<RepositoryIntelligenceResult | null>(null);
   const [intelLoading, setIntelLoading] = useState(false);
   const [fixingLint, setFixingLint] = useState(false);
+  const [retryingPr, setRetryingPr] = useState(false);
+  const [retryingCodegen, setRetryingCodegen] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [rejectModal, setRejectModal] = useState<{
     open: boolean;
     type: 'analysis' | 'code';
@@ -125,6 +122,42 @@ export default function TaskDetailPage() {
     }
   };
 
+  const handleRetryPr = async () => {
+    setRetryingPr(true);
+    try {
+      const updated = await api.tasks.retryPr(id);
+      setTask(updated);
+      setTab(5);
+    } finally {
+      setRetryingPr(false);
+    }
+  };
+
+  const handleRetryCodegen = async () => {
+    setRetryingCodegen(true);
+    try {
+      const updated = await api.tasks.retryCodegen(id);
+      setTask(updated);
+      setTab(3);
+    } finally {
+      setRetryingCodegen(false);
+    }
+  };
+
+  const handleRestart = async () => {
+    if (!window.confirm(`Restart ${task?.taskId} from the beginning? All progress will be cleared.`)) {
+      return;
+    }
+    setRestarting(true);
+    try {
+      const updated = await api.tasks.restart(id);
+      setTask(updated);
+      setTab(0);
+    } finally {
+      setRestarting(false);
+    }
+  };
+
   const handleApproval = async (type: 'analysis' | 'code', action: string, reason?: string, comment?: string) => {
     if (type === 'analysis') await api.tasks.approveAnalysis(id, action, comment, reason);
     else await api.tasks.approveCode(id, action, comment, reason);
@@ -145,6 +178,9 @@ export default function TaskDetailPage() {
   const pr = task.pullRequests?.[0];
   const isAnalysisApproval = ['analysis_approval_required', 'approval_required'].includes(task.status) && !codeDiff;
   const isCodeApproval = ['code_approval_required', 'approval_required'].includes(task.status) && !!codeDiff;
+  const validationPassed = validation && validation.lintStatus !== 'fail';
+  const canRetryPr = !!codeDiff && !pr && validationPassed && ['failed', 'qa_verification', 'validating'].includes(task.status);
+  const canRetryCodegen = task.status === 'failed' && !codeDiff;
 
   return (
     <>
@@ -161,9 +197,20 @@ export default function TaskDetailPage() {
         title={task.taskId}
         subtitle={`${task.project?.name || 'Unknown'} — ${task.requirement}`}
         action={
-          <Button component={Link} href="/tasks" startIcon={<ArrowBackIcon />}>
-            Back to Tasks
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<RestartAltIcon />}
+              onClick={handleRestart}
+              disabled={restarting}
+            >
+              {restarting ? 'Restarting...' : 'Restart'}
+            </Button>
+            <Button component={Link} href="/tasks" startIcon={<ArrowBackIcon />}>
+              Back to Tasks
+            </Button>
+          </Stack>
         }
       />
 
@@ -183,36 +230,37 @@ export default function TaskDetailPage() {
               <Typography variant="body2">{formatDate(task.createdAt)}</Typography>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Typography variant="caption" color="text.secondary">Agent</Typography>
-              <Typography variant="body2">{agentLabel(task.assignedAgent)}</Typography>
+              <Typography variant="caption" color="text.secondary">Active Agent</Typography>
+              <Typography variant="body2">
+                {resolveActiveAgentLabel(task.timeline || [], task.status)}
+              </Typography>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
       <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>Progress Timeline</Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {(task.timeline || []).map((step) => (
-              <Chip
-                key={step.id}
-                icon={<TimelineIcon status={step.status} />}
-                label={TIMELINE_LABELS[step.step] || step.step}
-                variant={step.status === 'completed' ? 'filled' : 'outlined'}
-                color={
-                  step.status === 'completed'
-                    ? 'success'
-                    : step.status === 'running'
-                      ? 'info'
-                      : step.step === 'approval' && (isAnalysisApproval || isCodeApproval)
-                        ? 'warning'
-                        : 'default'
-                }
-                size="small"
-              />
-            ))}
-          </Stack>
+        <CardContent sx={{ pt: 2.5, pb: 2.5 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+            Pipeline Progress
+          </Typography>
+          <TaskProgressTimeline timeline={task.timeline || []} taskStatus={task.status} />
+          {canRetryCodegen && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <Alert severity="error">
+                Code generation failed. The label replace logic has been fixed — click Retry to run again.
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<BuildIcon />}
+                onClick={handleRetryCodegen}
+                disabled={retryingCodegen}
+              >
+                {retryingCodegen ? 'Retrying...' : 'Retry Code Generation'}
+              </Button>
+            </Stack>
+          )}
         </CardContent>
       </Card>
 
@@ -265,7 +313,7 @@ export default function TaskDetailPage() {
                 <Typography variant="subtitle2" gutterBottom>Risk Level</Typography>
                 <RiskChip risk={task.risk} />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12}>
                 <RiskBreakdownCard risk={riskAssessment} loading={intelPanelsLoading} />
               </Grid>
               <Grid item xs={12}>
@@ -275,116 +323,31 @@ export default function TaskDetailPage() {
           </TabPanel>
 
           <TabPanel value={tab} index={1}>
-            {task.project && (
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.100', borderRadius: 2 }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Typography variant="subtitle2">Repository Status:</Typography>
-                  <Chip
-                    label={PROJECT_STATUS_LABELS[task.project.status] || task.project.status}
-                    size="small"
-                    color={task.project.status === 'completed' ? 'success' : 'default'}
-                  />
-                  {task.project.status === 'completed' && (
-                    <Typography variant="caption" color="text.secondary">
-                      {task.project.filesIndexed.toLocaleString()} files indexed
-                    </Typography>
-                  )}
-                  {task.project.status === 'indexing' && (
-                    <Typography variant="caption" color="info.main">
-                      Indexing {task.project.indexingProgress}% — analysis unavailable until complete
-                    </Typography>
-                  )}
-                </Stack>
-              </Box>
-            )}
-
             {intelLoading ? (
               <LinearProgress sx={{ mb: 2 }} />
             ) : repoIntel ? (
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Relevant Files</Typography>
-                  <List dense>
-                    {repoIntel.relevantFiles.map((f) => (
-                      <ListItem key={f.file}>
-                        <ListItemText primary={f.file} secondary={`Confidence: ${f.confidence}%`} />
-                        <LinearProgress variant="determinate" value={f.confidence} sx={{ width: 80 }} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Search Keywords</Typography>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-                    {repoIntel.keywords.map((k) => (
-                      <Chip key={k} label={k} size="small" variant="outlined" />
-                    ))}
-                  </Stack>
-                  <Typography variant="subtitle2" gutterBottom>Confidence Scores</Typography>
-                  <List dense>
-                    {repoIntel.confidenceScores.slice(0, 8).map((c) => (
-                      <ListItem key={c.file}>
-                        <ListItemText primary={c.file} />
-                        <Chip label={`${c.confidence}%`} size="small" color={c.confidence >= 80 ? 'success' : 'warning'} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>Dependency Graph</Typography>
-                  <DependencyGraphView
-                    edges={repoIntel.dependencyGraph}
-                    adjacencyList={repoIntel.adjacencyList}
-                    rootFiles={repoIntel.relevantFiles.slice(0, 3).map((f) => f.file)}
-                  />
-                </Grid>
-              </Grid>
+              <Box sx={{ mb: 3 }}>
+                <RepositoryIntelligenceView
+                  data={repoIntel}
+                  filesIndexed={task.project?.filesIndexed}
+                  projectStatus={task.project?.status}
+                />
+              </Box>
             ) : task.project?.status !== 'completed' ? (
               <Typography color="text.secondary" sx={{ mb: 2 }}>
                 Repository intelligence requires completed indexing.
               </Typography>
             ) : null}
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 3 }} />
 
             {analysis ? (
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Impacted Files (Agent Analysis)</Typography>
-                  <List dense>
-                    {analysis.impactedFiles.map((f) => (
-                      <ListItem key={f.path}>
-                        <ListItemText primary={f.path} secondary={`Confidence: ${f.confidence}%`} />
-                        <LinearProgress variant="determinate" value={f.confidence} sx={{ width: 80 }} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Regression Areas</Typography>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-                    {analysis.regressionAreas.map((a) => (
-                      <Chip key={a} label={a} size="small" color="warning" variant="outlined" />
-                    ))}
-                  </Stack>
-                  {analysis.dependencyGraph && (
-                    <>
-                      <Typography variant="subtitle2" gutterBottom>Stored Dependency Graph</Typography>
-                      <DependencyGraphView
-                        edges={Object.entries(analysis.dependencyGraph).flatMap(([source, targets]) =>
-                          targets.map((target) => ({ source, target }))
-                        )}
-                      />
-                    </>
-                  )}
-                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>API Dependencies</Typography>
-                  <List dense>
-                    {analysis.apiDependencies.map((d) => (
-                      <ListItem key={d}><ListItemText primary={d} /></ListItem>
-                    ))}
-                  </List>
-                </Grid>
-              </Grid>
+              <AgentAnalysisView
+                impactedFiles={analysis.impactedFiles}
+                regressionAreas={analysis.regressionAreas}
+                apiDependencies={analysis.apiDependencies}
+                dependencyGraph={analysis.dependencyGraph ?? undefined}
+              />
             ) : (
               <Typography color="text.secondary">Agent analysis pending...</Typography>
             )}
@@ -401,7 +364,9 @@ export default function TaskDetailPage() {
             {tests ? (
               <QaTestCasesView tests={tests} taskStatus={task.status} />
             ) : (
-              <Typography color="text.secondary">Tests pending — generated after code generation completes.</Typography>
+              <Typography color="text.secondary">
+                QA test plan pending — detailed cases are generated after code generation, then executed during validation.
+              </Typography>
             )}
           </TabPanel>
 
@@ -470,16 +435,38 @@ export default function TaskDetailPage() {
                 </Grid>
 
                 {(validation.lintStatus === 'fail' || validation.prettierStatus === 'fail') && (
-                  <Button
-                    variant="contained"
-                    color="warning"
-                    startIcon={<BuildIcon />}
-                    onClick={handleFixLint}
-                    disabled={fixingLint}
-                    sx={{ mb: 2 }}
-                  >
-                    {fixingLint ? 'Fixing...' : 'Auto-fix ESLint & Prettier'}
-                  </Button>
+                  <Stack spacing={2} sx={{ mb: 2 }}>
+                    <Alert severity="info">
+                      Pull request is not created until validation passes. Code approval is already done — click
+                      Auto-fix below; PR will be created automatically when ESLint passes.
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      startIcon={<BuildIcon />}
+                      onClick={handleFixLint}
+                      disabled={fixingLint}
+                    >
+                      {fixingLint ? 'Fixing...' : 'Auto-fix ESLint & Prettier'}
+                    </Button>
+                  </Stack>
+                )}
+
+                {canRetryPr && validation.lintStatus !== 'fail' && (
+                  <Stack spacing={2} sx={{ mb: 2 }}>
+                    <Alert severity="success">
+                      Validation passed. You can create the GitLab merge request now.
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<MergeTypeIcon />}
+                      onClick={handleRetryPr}
+                      disabled={retryingPr}
+                    >
+                      {retryingPr ? 'Creating PR...' : 'Create Pull Request'}
+                    </Button>
+                  </Stack>
                 )}
 
                 {validation.details || validation.lintStatus ? (
@@ -495,35 +482,46 @@ export default function TaskDetailPage() {
 
           <TabPanel value={tab} index={5}>
             {pr ? (
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="caption" color="text.secondary">Branch</Typography>
-                  <Typography variant="body1">{pr.branchName}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="caption" color="text.secondary">Commit</Typography>
-                  <Typography variant="body1" fontFamily="monospace">{pr.commitSha || '—'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="caption" color="text.secondary">Status</Typography>
-                  <Box sx={{ mt: 0.5 }}>
-                    <Chip label={pr.reviewStatus} color={prStatusColor(pr.reviewStatus)} size="small" />
-                  </Box>
-                </Grid>
-                {pr.prUrl && (
-                  <Grid item xs={12}>
-                    <Button variant="contained" href={pr.prUrl} target="_blank" sx={{ mr: 1 }}>
-                      View Pull Request {pr.prNumber ? `#${pr.prNumber}` : ''}
+              <PullRequestView
+                pr={pr}
+                codeDiff={codeDiff}
+                validation={validation}
+                taskId={id}
+                onUpdated={load}
+              />
+            ) : codeDiff ? (
+              <Stack spacing={2}>
+                {task.status === 'failed' && validationPassed ? (
+                  <>
+                    <Alert severity="warning">
+                      Pipeline stopped before PR creation. Validation is OK — use Create Pull Request on the Validation tab.
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      startIcon={<MergeTypeIcon />}
+                      onClick={handleRetryPr}
+                      disabled={retryingPr}
+                    >
+                      {retryingPr ? 'Creating PR...' : 'Create Pull Request'}
                     </Button>
-                  </Grid>
+                  </>
+                ) : (
+                  <Typography color="text.secondary">
+                    Pull request is being created. Review AI-generated code below while waiting.
+                  </Typography>
                 )}
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>MR Actions</Typography>
-                  <MrActionButtons taskId={id} reviewStatus={pr.reviewStatus} size="medium" onUpdated={load} />
-                </Grid>
-              </Grid>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1" fontWeight={700}>AI Generated Code</Typography>
+                      <Chip label="Pending PR" size="small" color="warning" variant="outlined" />
+                    </Stack>
+                    <CodeDiffViewer codeDiff={codeDiff} />
+                  </CardContent>
+                </Card>
+              </Stack>
             ) : (
-              <Typography color="text.secondary">Pull request pending...</Typography>
+              <Typography color="text.secondary">Pull request pending — code generation must complete first.</Typography>
             )}
           </TabPanel>
 

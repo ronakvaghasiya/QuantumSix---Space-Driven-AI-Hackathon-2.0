@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -51,6 +52,42 @@ export class TasksController {
   @ApiOperation({ summary: 'Auto-fix ESLint/Prettier issues and re-validate' })
   fixLint(@Param('id', ParseUUIDPipe) id: string) {
     return this.tasksService.fixLint(id);
+  }
+
+  @Post(':id/retry-pr')
+  @ApiOperation({ summary: 'Create GitLab MR after validation passes' })
+  retryPr(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tasksService.retryPr(id);
+  }
+
+  @Post('by-task-id/:taskId/restart')
+  @ApiOperation({ summary: 'Restart task pipeline from beginning (by display task ID e.g. BB-1006)' })
+  restartByTaskId(@Param('taskId') taskId: string) {
+    return this.tasksService.restartByTaskId(taskId);
+  }
+
+  @Delete('by-task-id/:taskId')
+  @ApiOperation({ summary: 'Delete task permanently by display ID (e.g. BB-1006)' })
+  deleteByTaskId(@Param('taskId') taskId: string) {
+    return this.tasksService.deleteByTaskId(taskId);
+  }
+
+  @Post(':id/restart')
+  @ApiOperation({ summary: 'Restart task pipeline from beginning' })
+  restart(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tasksService.restart(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete task permanently from database' })
+  delete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tasksService.delete(id);
+  }
+
+  @Post(':id/retry-codegen')
+  @ApiOperation({ summary: 'Re-run code generation after a failed attempt' })
+  retryCodegen(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tasksService.retryCodegen(id);
   }
 
   @Post(':id/approve-code')

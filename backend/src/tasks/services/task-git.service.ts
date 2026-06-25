@@ -7,6 +7,7 @@ import simpleGit from 'simple-git';
 import { Task } from '../entities/task.entity';
 import { TaskCodeDiff } from '../entities/task-code-diff.entity';
 import { GitLabService } from '../../gitlab/gitlab.service';
+import { IndexingService } from '../../repository/services/indexing.service';
 import { CodeContextService } from './code-context.service';
 
 const execAsync = promisify(exec);
@@ -24,6 +25,7 @@ export class TaskGitService {
   constructor(
     private readonly gitlab: GitLabService,
     private readonly codeContext: CodeContextService,
+    private readonly indexing: IndexingService,
   ) {}
 
   async prepareWorkspace(
@@ -32,8 +34,15 @@ export class TaskGitService {
     codeDiff: TaskCodeDiff | null,
   ): Promise<string | null> {
     const project = task.project;
-    const clonePath = project?.clonePath;
-    if (!project || !clonePath || !fs.existsSync(clonePath)) return null;
+    if (!project) return null;
+
+    let clonePath = project.clonePath;
+    if (!clonePath || !fs.existsSync(clonePath)) {
+      this.logger.warn(`Clone missing for project ${project.id} — cloning on demand`);
+      clonePath = await this.indexing.ensureProjectCloned(project.id);
+      if (clonePath) project.clonePath = clonePath;
+    }
+    if (!clonePath || !fs.existsSync(clonePath)) return null;
 
     const defaultBranch = project.defaultBranch || 'main';
     const git = simpleGit(clonePath);
@@ -108,6 +117,16 @@ export class TaskGitService {
     return parts.join('\n');
   }
 
+  async hasWorkingTreeChanges(clonePath: string, branchName: string): Promise<boolean> {
+    const git = simpleGit(clonePath);
+    const branches = await git.branchLocal();
+    if (branches.all.includes(branchName)) {
+      await git.checkout(branchName);
+    }
+    const status = await git.status();
+    return status.files.length > 0;
+  }
+
   async commitAndPush(
     task: Task,
     branchName: string,
@@ -137,7 +156,16 @@ export class TaskGitService {
       }
 
       await git.checkout(branchName);
-      const status = await git.status();
+      let status = await git.status();
+      if (status.files.length === 0 && codeDiff) {
+        this.logger.warn(`No git changes on ${branchName} — re-applying code diff`);
+        const applied = await this.applyChanges(clonePath, task, codeDiff);
+        if (!applied.changed) {
+          this.logger.warn(`No file changes to commit for ${task.taskId}`);
+          return null;
+        }
+        status = await git.status();
+      }
       if (status.files.length === 0) {
         this.logger.warn(`No staged changes for ${task.taskId}`);
         return null;
@@ -176,6 +204,13 @@ export class TaskGitService {
         const full = path.join(clonePath, normalized);
         const dir = path.dirname(full);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+        const existing = fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '';
+        if (existing === edit.newContent) {
+          this.logger.warn(`Skipping ${normalized} — content already matches (no diff)`);
+          continue;
+        }
+
         fs.writeFileSync(full, edit.newContent);
         appliedFiles.push(normalized);
         for (const c of edit.changeComments || []) {

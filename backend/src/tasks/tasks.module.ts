@@ -31,6 +31,8 @@ import { SettingsModule } from '../settings/settings.module';
 import { MemoryModule } from '../memory/memory.module';
 import { RiskModule } from '../risk/risk.module';
 import { Project } from '../projects/entities/project.entity';
+import { RepositoryFile } from '../repository/entities/repository-file.entity';
+import { RiskAssessment } from '../risk/entities/risk-assessment.entity';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { Project } from '../projects/entities/project.entity';
       TaskFeedback,
       PlaywrightRun,
       SecurityScan,
+      RiskAssessment,
+      RepositoryFile,
       Project,
     ]),
     WebhooksModule,

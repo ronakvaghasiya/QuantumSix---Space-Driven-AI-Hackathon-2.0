@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { PageHeader } from '@/components/common/KpiCard';
 import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { api, Task, Project } from '@/lib/api';
@@ -38,6 +39,7 @@ export default function TasksPage() {
   const [csvContent, setCsvContent] = useState('');
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -79,6 +81,22 @@ export default function TasksPage() {
     const reader = new FileReader();
     reader.onload = (ev) => setCsvContent(ev.target?.result as string);
     reader.readAsText(file);
+  };
+
+  const handleDelete = async (task: Task) => {
+    if (!window.confirm(`Delete task ${task.taskId} permanently? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(task.id);
+    setError('');
+    try {
+      await api.tasks.delete(task.id);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -142,8 +160,17 @@ export default function TasksPage() {
                     <TableCell>{formatDate(task.createdAt)}</TableCell>
                     <TableCell>{agentLabel(task.assignedAgent)}</TableCell>
                     <TableCell align="right">
-                      <IconButton component={Link} href={`/tasks/${task.id}`} size="small">
+                      <IconButton component={Link} href={`/tasks/${task.id}`} size="small" title="View">
                         <VisibilityIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        title="Delete"
+                        disabled={deletingId === task.id}
+                        onClick={() => handleDelete(task)}
+                      >
+                        <DeleteOutlineIcon />
                       </IconButton>
                     </TableCell>
                   </TableRow>

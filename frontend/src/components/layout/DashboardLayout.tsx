@@ -120,8 +120,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <ListItemText
                       primary={item.label}
                       primaryTypographyProps={{
+                        variant: 'subtitle2',
                         fontWeight: active ? 700 : 500,
-                        fontSize: '0.875rem',
                       }}
                     />
                   </ListItemButton>
@@ -130,12 +130,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </List>
           </Box>
         ))}
-      </Box>
-
-      <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
-        <Typography variant="caption" color="text.secondary">
-          Local dev mode — no login required
-        </Typography>
       </Box>
     </Box>
   );

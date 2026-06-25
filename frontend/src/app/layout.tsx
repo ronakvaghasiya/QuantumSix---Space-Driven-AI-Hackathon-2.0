@@ -27,9 +27,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const fontVars = `${roboto.variable} ${poppins.variable}`;
+
   return (
-    <html lang="en" className={`${roboto.variable} ${poppins.variable}`}>
-      <body className={roboto.className}>
+    <html lang="en" className={fontVars}>
+      <body className={`${fontVars} ${roboto.className}`}>
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />

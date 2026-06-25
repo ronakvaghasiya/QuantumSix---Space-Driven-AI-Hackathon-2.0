@@ -5,15 +5,23 @@ import { In, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { TaskTimeline } from './entities/task-timeline.entity';
 import { CreateTaskDto, UploadTasksDto, ApprovalDto } from './dto/task.dto';
-import { TaskStatus, TimelineStep, TimelineStepStatus } from '../common/enums/task.enum';
+import { TaskStatus, TimelineStep, TimelineStepStatus, RiskLevel } from '../common/enums/task.enum';
 import { N8nService } from '../webhooks/n8n.service';
 import { TaskPipelineService } from './services/task-pipeline.service';
 import { TaskPullRequest } from './entities/task-pull-request.entity';
+import { TaskAnalysis } from './entities/task-analysis.entity';
+import { TaskTest } from './entities/task-test.entity';
+import { TaskCodeDiff } from './entities/task-code-diff.entity';
+import { TaskValidation } from './entities/task-validation.entity';
+import { PlaywrightRun } from './entities/playwright-run.entity';
+import { SecurityScan } from '../security/entities/security-scan.entity';
 import { GitLabService } from '../gitlab/gitlab.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { AuditService } from '../audit/audit.service';
-import { FeedbackGate } from './entities/task-feedback.entity';
+import { FeedbackGate, TaskFeedback } from './entities/task-feedback.entity';
 import { Project } from '../projects/entities/project.entity';
+import { RiskAssessment } from '../risk/entities/risk-assessment.entity';
+import { TaskMemoryService } from '../memory/services/task-memory.service';
 
 const DEFAULT_TIMELINE_STEPS: TimelineStep[] = [
   TimelineStep.REQUIREMENT_ANALYSIS,
@@ -36,6 +44,22 @@ export class TasksService {
     private readonly timelineRepo: Repository<TaskTimeline>,
     @InjectRepository(TaskPullRequest)
     private readonly prRepo: Repository<TaskPullRequest>,
+    @InjectRepository(TaskAnalysis)
+    private readonly analysisRepo: Repository<TaskAnalysis>,
+    @InjectRepository(TaskTest)
+    private readonly testRepo: Repository<TaskTest>,
+    @InjectRepository(TaskCodeDiff)
+    private readonly codeDiffRepo: Repository<TaskCodeDiff>,
+    @InjectRepository(TaskValidation)
+    private readonly validationRepo: Repository<TaskValidation>,
+    @InjectRepository(PlaywrightRun)
+    private readonly playwrightRunRepo: Repository<PlaywrightRun>,
+    @InjectRepository(SecurityScan)
+    private readonly securityScanRepo: Repository<SecurityScan>,
+    @InjectRepository(TaskFeedback)
+    private readonly feedbackRepo: Repository<TaskFeedback>,
+    @InjectRepository(RiskAssessment)
+    private readonly riskRepo: Repository<RiskAssessment>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
     private readonly n8nService: N8nService,
@@ -43,8 +67,22 @@ export class TasksService {
     private readonly gitlab: GitLabService,
     private readonly feedback: FeedbackService,
     private readonly audit: AuditService,
+    private readonly taskMemory: TaskMemoryService,
     private readonly config: ConfigService,
   ) {}
+
+  private async clearTaskArtifacts(taskId: string): Promise<void> {
+    await this.analysisRepo.delete({ taskId });
+    await this.testRepo.delete({ taskId });
+    await this.codeDiffRepo.delete({ taskId });
+    await this.validationRepo.delete({ taskId });
+    await this.prRepo.delete({ taskId });
+    await this.playwrightRunRepo.delete({ taskId });
+    await this.securityScanRepo.delete({ taskId });
+    await this.feedbackRepo.delete({ taskId });
+    await this.riskRepo.delete({ taskId });
+    await this.taskMemory.purgeTask(taskId);
+  }
 
   private async recordApproval(
     taskId: string,
@@ -262,8 +300,95 @@ export class TasksService {
 
   async fixLint(id: string): Promise<Task> {
     await this.findOne(id);
-    await this.pipeline.fixLintAndRevalidate(id);
+    try {
+      await this.pipeline.fixLintAndRevalidate(id);
+    } catch (error) {
+      throw new BadRequestException((error as Error).message || 'Fix lint failed');
+    }
     return this.findOne(id);
+  }
+
+  async retryPr(id: string): Promise<Task> {
+    await this.findOne(id);
+    try {
+      await this.pipeline.retryPrCreation(id);
+    } catch (error) {
+      throw new BadRequestException((error as Error).message || 'PR creation failed');
+    }
+    return this.findOne(id);
+  }
+
+  async retryCodegen(id: string): Promise<Task> {
+    const task = await this.findOne(id);
+    if (task.status !== TaskStatus.FAILED) {
+      throw new BadRequestException('Only failed tasks can retry code generation');
+    }
+    task.status = TaskStatus.GENERATING_CODE;
+    await this.taskRepo.save(task);
+    this.triggerCodeGeneration(task);
+    return this.findOne(id);
+  }
+
+  async restartByTaskId(taskId: string): Promise<Task> {
+    const task = await this.findByTaskId(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task ${taskId} not found`);
+    }
+    return this.restart(task.id);
+  }
+
+  /** Clear pipeline artifacts and re-run analysis from step 1 */
+  async restart(id: string): Promise<Task> {
+    const task = await this.findOne(id);
+
+    await this.clearTaskArtifacts(id);
+
+    const timeline = await this.timelineRepo.find({ where: { taskId: id } });
+    for (const entry of timeline) {
+      entry.status = TimelineStepStatus.PENDING;
+      entry.startedAt = null;
+      entry.completedAt = null;
+      entry.message = null;
+      await this.timelineRepo.save(entry);
+    }
+
+    await this.taskRepo.update(id, {
+      status: TaskStatus.PENDING,
+      assignedAgent: null,
+      acceptanceCriteria: null,
+      userStories: null,
+      businessImpact: null,
+      keywords: null,
+      risk: RiskLevel.MEDIUM,
+    });
+
+    await this.audit.log('task', id, 'task_restarted', { taskId: task.taskId });
+
+    const refreshed = await this.findOne(id);
+    this.triggerAnalysis(refreshed);
+    return refreshed;
+  }
+
+  async deleteByTaskId(taskId: string): Promise<{ deleted: boolean; taskId: string }> {
+    const task = await this.findByTaskId(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task ${taskId} not found`);
+    }
+    return this.delete(task.id);
+  }
+
+  /** Permanently remove task and all related records from the database */
+  async delete(id: string): Promise<{ deleted: boolean; taskId: string }> {
+    const task = await this.findOne(id);
+    const displayId = task.taskId;
+
+    await this.clearTaskArtifacts(id);
+    await this.timelineRepo.delete({ taskId: id });
+    await this.taskRepo.delete(id);
+
+    await this.audit.log('task', id, 'task_deleted', { taskId: displayId });
+
+    return { deleted: true, taskId: displayId };
   }
 
   async approveCode(id: string, dto: ApprovalDto): Promise<Task> {

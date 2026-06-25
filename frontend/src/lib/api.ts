@@ -143,6 +143,18 @@ export const api = {
       }),
     fixLint: (id: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/fix-lint`, { method: 'POST' }),
+    retryPr: (id: string) =>
+      fetchApi<TaskDetail>(`/tasks/${id}/retry-pr`, { method: 'POST' }),
+    retryCodegen: (id: string) =>
+      fetchApi<TaskDetail>(`/tasks/${id}/retry-codegen`, { method: 'POST' }),
+    restart: (id: string) =>
+      fetchApi<TaskDetail>(`/tasks/${id}/restart`, { method: 'POST' }),
+    restartByTaskId: (taskId: string) =>
+      fetchApi<TaskDetail>(`/tasks/by-task-id/${encodeURIComponent(taskId)}/restart`, { method: 'POST' }),
+    delete: (id: string) =>
+      fetchApi<{ deleted: boolean; taskId: string }>(`/tasks/${id}`, { method: 'DELETE' }),
+    deleteByTaskId: (taskId: string) =>
+      fetchApi<{ deleted: boolean; taskId: string }>(`/tasks/by-task-id/${encodeURIComponent(taskId)}`, { method: 'DELETE' }),
     approveCode: (id: string, action: string, comment?: string, reason?: string) =>
       fetchApi<TaskDetail>(`/tasks/${id}/approve-code`, {
         method: 'POST',

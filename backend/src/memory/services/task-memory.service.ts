@@ -90,4 +90,14 @@ export class TaskMemoryService {
       take: limit,
     });
   }
+
+  async purgeTask(taskId: string): Promise<void> {
+    const rows = await this.memoryRepo.find({ where: { taskId } });
+    for (const row of rows) {
+      if (row.qdrantPointId) {
+        await this.embedding.deleteTaskMemoryPoint(row.qdrantPointId).catch(() => undefined);
+      }
+    }
+    await this.memoryRepo.delete({ taskId });
+  }
 }

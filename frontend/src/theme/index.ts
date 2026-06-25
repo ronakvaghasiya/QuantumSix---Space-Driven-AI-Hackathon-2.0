@@ -2,8 +2,11 @@
 
 import { createTheme, alpha } from '@mui/material/styles';
 
-const roboto = 'var(--font-roboto), "Roboto", "Helvetica", "Arial", sans-serif';
-const poppins = 'var(--font-poppins), "Poppins", "Roboto", sans-serif';
+export const fontRoboto = 'var(--font-roboto), "Roboto", "Helvetica", "Arial", sans-serif';
+export const fontPoppins = 'var(--font-poppins), "Poppins", "Roboto", sans-serif';
+
+const roboto = fontRoboto;
+const poppins = fontPoppins;
 
 const theme = createTheme({
   palette: {
@@ -82,6 +85,33 @@ const theme = createTheme({
     MuiChip: {
       styleOverrides: { root: { fontFamily: poppins, fontWeight: 600 } },
     },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: { fontFamily: poppins, fontWeight: 500, fontSize: '0.875rem' },
+        secondary: { fontFamily: roboto, fontSize: '0.75rem' },
+      },
+    },
+    MuiTab: {
+      styleOverrides: { root: { fontFamily: poppins, fontWeight: 600, textTransform: 'none' } },
+    },
+    MuiMenuItem: {
+      styleOverrides: { root: { fontFamily: poppins, fontWeight: 500 } },
+    },
+    MuiDialogTitle: {
+      styleOverrides: { root: { fontFamily: poppins, fontWeight: 600 } },
+    },
+    MuiAlertTitle: {
+      styleOverrides: { root: { fontFamily: poppins, fontWeight: 600 } },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: { fontFamily: roboto },
+        input: { fontFamily: roboto },
+      },
+    },
+    MuiFormLabel: {
+      styleOverrides: { root: { fontFamily: poppins, fontWeight: 500 } },
+    },
     MuiTableHead: {
       styleOverrides: {
         root: {
@@ -98,7 +128,7 @@ const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderColor: 'rgba(145, 158, 171, 0.12)' },
+        root: { fontFamily: roboto, borderColor: 'rgba(145, 158, 171, 0.12)' },
       },
     },
     MuiTextField: {
@@ -118,7 +148,9 @@ const theme = createTheme({
     },
     MuiCssBaseline: {
       styleOverrides: {
+        html: { fontFamily: roboto },
         body: { fontFamily: roboto, backgroundColor: '#F4F6F8' },
+        'h1, h2, h3, h4, h5, h6': { fontFamily: poppins },
       },
     },
   },
