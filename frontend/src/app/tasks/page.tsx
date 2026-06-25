@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   Table,
@@ -22,15 +23,17 @@ import {
   Alert,
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { PageHeader } from '@/components/common/KpiCard';
 import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { api, Task, Project } from '@/lib/api';
-import { formatDate, agentLabel } from '@/lib/utils';
+import { formatDate, resolveAssignedAgentDisplay } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function TasksPage() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ export default function TasksPage() {
   const [selectedProject, setSelectedProject] = useState('');
   const [csvContent, setCsvContent] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -63,10 +67,16 @@ export default function TasksPage() {
     if (!selectedProject || !csvContent.trim()) return;
     setUploading(true);
     setError('');
+    setSuccess('');
     try {
-      await api.tasks.upload({ projectId: selectedProject, csvContent });
+      const created = await api.tasks.upload({ projectId: selectedProject, csvContent });
       setUploadOpen(false);
       setCsvContent('');
+      if (created.length === 1) {
+        router.push(`/tasks/${created[0].id}`);
+        return;
+      }
+      setSuccess(`Created ${created.length} tasks`);
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -105,13 +115,25 @@ export default function TasksPage() {
         title="Tasks"
         subtitle="Manage and track AI agent tasks"
         action={
-          <Button variant="contained" startIcon={<UploadFileIcon />} onClick={() => setUploadOpen(true)}>
-            Upload CSV
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              component="a"
+              href="/sample-tasks.csv"
+              download="sample-tasks.csv"
+            >
+              Sample CSV
+            </Button>
+            <Button variant="contained" startIcon={<UploadFileIcon />} onClick={() => setUploadOpen(true)}>
+              Upload CSV
+            </Button>
+          </Stack>
         }
       />
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {!loading && projects.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }} action={
@@ -158,7 +180,7 @@ export default function TasksPage() {
                     <TableCell><StatusChip status={task.status} /></TableCell>
                     <TableCell><RiskChip risk={task.risk} /></TableCell>
                     <TableCell>{formatDate(task.createdAt)}</TableCell>
-                    <TableCell>{agentLabel(task.assignedAgent)}</TableCell>
+                    <TableCell>{resolveAssignedAgentDisplay(task.assignedAgent, task.status)}</TableCell>
                     <TableCell align="right">
                       <IconButton component={Link} href={`/tasks/${task.id}`} size="small" title="View">
                         <VisibilityIcon />
@@ -199,6 +221,16 @@ export default function TasksPage() {
             <Button variant="outlined" component="label">
               Choose CSV File
               <input type="file" accept=".csv" hidden onChange={handleFileUpload} />
+            </Button>
+            <Button
+              size="small"
+              startIcon={<DownloadIcon />}
+              component="a"
+              href="/sample-tasks.csv"
+              download="sample-tasks.csv"
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Download sample CSV
             </Button>
             <TextField
               label="CSV Content"

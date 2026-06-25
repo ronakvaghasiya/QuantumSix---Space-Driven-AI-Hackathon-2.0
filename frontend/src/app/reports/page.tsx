@@ -23,7 +23,7 @@ import {
 import { KpiCard, PageHeader } from '@/components/common/KpiCard';
 import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { api, AnalyticsData } from '@/lib/api';
-import { agentLabel, TASK_STATUS_LABELS } from '@/lib/utils';
+import { agentLabel, TASK_STATUS_LABELS, resolveAssignedAgentDisplay } from '@/lib/utils';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -361,7 +361,7 @@ export default function ReportsPage() {
                       <TableCell>{row.projectName}</TableCell>
                       <TableCell><StatusChip status={row.status} /></TableCell>
                       <TableCell>
-                        <Typography variant="caption">{agentLabel(row.assignedAgent)}</Typography>
+                        <Typography variant="caption">{resolveAssignedAgentDisplay(row.assignedAgent, row.status)}</Typography>
                       </TableCell>
                       <TableCell><RiskChip risk={row.risk} /></TableCell>
                       <TableCell>
