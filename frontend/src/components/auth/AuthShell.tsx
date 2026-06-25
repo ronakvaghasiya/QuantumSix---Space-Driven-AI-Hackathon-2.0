@@ -112,7 +112,7 @@ export function AuthShell({
           </Box>
         </Stack>
 
-        <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 400, py: 4 }}>
+        <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 400, py: 4 }} className="auth-slide-up">
           <Typography
             variant="h3"
             sx={{
@@ -123,15 +123,22 @@ export function AuthShell({
               fontSize: { lg: '2rem', xl: '2.35rem' },
             }}
           >
-            Ship code with an AI SDLC copilot
+            {BRAND.tagline}
           </Typography>
           <Typography variant="body1" sx={{ color: alpha('#fff', 0.78), lineHeight: 1.75, mb: 4 }}>
             {BRAND.description}
           </Typography>
 
           <Stack spacing={2}>
-            {FEATURES.map((f) => (
-              <Stack key={f.title} direction="row" spacing={2} alignItems="flex-start">
+            {FEATURES.map((f, i) => (
+              <Stack
+                key={f.title}
+                direction="row"
+                spacing={2}
+                alignItems="flex-start"
+                className="auth-slide-up"
+                sx={{ animationDelay: `${0.1 + i * 0.08}s` }}
+              >
                 <Box
                   sx={{
                     width: 36,
@@ -207,6 +214,7 @@ export function AuthShell({
 
           <Card
             elevation={0}
+            className="auth-fade-in"
             sx={{
               p: { xs: 3, sm: 4 },
               borderRadius: 3,

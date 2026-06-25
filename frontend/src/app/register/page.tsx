@@ -40,7 +40,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="Join the workspace — same pipeline on Windows, Ubuntu, and macOS."
+      subtitle="Create your RepoPilot AI account — one prompt, complete feature delivery."
     >
       <Stack component="form" spacing={2} onSubmit={handleSubmit}>
         {error && <Alert severity="error" variant="outlined">{error}</Alert>}

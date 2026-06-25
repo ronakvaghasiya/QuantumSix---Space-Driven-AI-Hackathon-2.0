@@ -1,11 +1,11 @@
 /** Single source of truth for product naming across the UI */
 export const BRAND = {
   name: 'RepoPilot AI',
-  tagline: 'SDLC Engineering Copilot',
+  tagline: 'One Prompt. Complete Feature Delivery.',
   organization: 'QuantumSix',
   edition: 'Hackathon 2.0',
-  fullTitle: 'RepoPilot AI — SDLC Engineering Copilot',
+  fullTitle: 'RepoPilot AI — One Prompt. Complete Feature Delivery.',
   description:
-    'AI-powered autonomous SDLC platform — analyze, generate code, validate, and open merge requests.',
+    'From a single prompt to shipped features — analyze repos, generate code, validate, and open merge requests.',
   orgLine: 'QuantumSix · Hackathon 2.0',
 } as const;

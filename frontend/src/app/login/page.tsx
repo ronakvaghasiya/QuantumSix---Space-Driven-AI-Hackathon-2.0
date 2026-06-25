@@ -153,7 +153,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to run your autonomous SDLC pipeline — tasks, agents, and merge requests."
+      subtitle="Sign in to RepoPilot AI — one prompt to complete feature delivery."
     >
       <Suspense fallback={<Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />}>
         <LoginForm />
