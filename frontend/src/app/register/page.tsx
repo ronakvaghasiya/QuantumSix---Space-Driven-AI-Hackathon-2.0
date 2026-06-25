@@ -1,15 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Button,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { AuthShell } from '@/components/auth/AuthShell';
+import { AuthFormLink } from '@/components/auth/AuthFormLink';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterPage() {
@@ -35,11 +39,11 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Join QuantumSix"
-      subtitle="Create your account — works on Windows, Ubuntu, and macOS."
+      title="Create your account"
+      subtitle="Join the workspace — same pipeline on Windows, Ubuntu, and macOS."
     >
-      <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
-        {error && <Alert severity="error">{error}</Alert>}
+      <Stack component="form" spacing={2} onSubmit={handleSubmit}>
+        {error && <Alert severity="error" variant="outlined">{error}</Alert>}
         <TextField
           label="Full name"
           value={name}
@@ -47,6 +51,13 @@ export default function RegisterPage() {
           required
           fullWidth
           autoComplete="name"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <PersonOutlineIcon fontSize="small" color="disabled" />
+              </InputAdornment>
+            ),
+          }}
         />
         <TextField
           label="Email"
@@ -56,6 +67,13 @@ export default function RegisterPage() {
           required
           fullWidth
           autoComplete="email"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailOutlinedIcon fontSize="small" color="disabled" />
+              </InputAdornment>
+            ),
+          }}
         />
         <TextField
           label="Password"
@@ -66,15 +84,26 @@ export default function RegisterPage() {
           fullWidth
           helperText="Minimum 8 characters"
           autoComplete="new-password"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockOutlinedIcon fontSize="small" color="disabled" />
+              </InputAdornment>
+            ),
+          }}
         />
-        <Button type="submit" variant="contained" size="large" disabled={submitting} fullWidth>
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={submitting}
+          fullWidth
+          sx={{ py: 1.35, mt: 0.5 }}
+        >
           {submitting ? 'Creating account…' : 'Create account'}
         </Button>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Already have an account?{' '}
-          <Link href="/login" style={{ color: '#00A76F', fontWeight: 600 }}>
-            Sign in
-          </Link>
+          Already have an account? <AuthFormLink href="/login">Sign in</AuthFormLink>
         </Typography>
       </Stack>
     </AuthShell>
