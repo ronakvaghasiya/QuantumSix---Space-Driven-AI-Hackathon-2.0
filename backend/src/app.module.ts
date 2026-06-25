@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProjectsModule } from './projects/projects.module';
@@ -14,6 +15,9 @@ import { SettingsModule } from './settings/settings.module';
 import { MemoryModule } from './memory/memory.module';
 import { RiskModule } from './risk/risk.module';
 import { KnowledgeGraphModule } from './knowledge-graph/knowledge-graph.module';
+import { AuthModule } from './auth/auth.module';
+import { PlatformModule } from './platform/platform.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -29,6 +33,8 @@ import { KnowledgeGraphModule } from './knowledge-graph/knowledge-graph.module';
         synchronize: process.env.NODE_ENV !== 'production',
       }),
     }),
+    AuthModule,
+    PlatformModule,
     ProjectsModule,
     TasksModule,
     ReportsModule,
@@ -42,5 +48,6 @@ import { KnowledgeGraphModule } from './knowledge-graph/knowledge-graph.module';
     RiskModule,
     KnowledgeGraphModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule {}

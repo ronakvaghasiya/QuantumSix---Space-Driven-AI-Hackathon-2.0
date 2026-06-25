@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { platform } from 'os';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { v4 as uuidv4 } from 'uuid';
@@ -44,7 +45,9 @@ export class EmbeddingService {
     private readonly projectAi: ProjectAiService,
   ) {
     this.qdrant = new QdrantClient({
-      url: config.get('QDRANT_URL', 'http://localhost:6333'),
+      url:
+        config.get('QDRANT_URL') ||
+        (platform() === 'win32' ? 'http://127.0.0.1:6333' : 'http://localhost:6333'),
       checkCompatibility: false,
     });
     this.collection = config.get('QDRANT_COLLECTION', 'repository_knowledge');
@@ -94,9 +97,19 @@ export class EmbeddingService {
   }
 
   private async createCollection(dimensions: number): Promise<void> {
-    await this.qdrant.createCollection(this.collection, {
-      vectors: { size: dimensions, distance: 'Cosine' },
-    });
+    try {
+      await this.qdrant.createCollection(this.collection, {
+        vectors: { size: dimensions, distance: 'Cosine' },
+      });
+    } catch (err) {
+      const body = JSON.stringify((err as { data?: unknown }).data || '');
+      if (body.includes('Collection data already exists')) {
+        throw new BadRequestException(
+          `Qdrant has orphaned collection data for "${this.collection}". Run: npm run repair:qdrant`,
+        );
+      }
+      throw err;
+    }
     await this.qdrant.createPayloadIndex(this.collection, {
       field_name: 'projectId',
       field_schema: 'keyword',

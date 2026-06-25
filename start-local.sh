@@ -12,6 +12,6 @@ fi
 
 "$ROOT/scripts/start-infra-local.sh"
 
-echo "==> Starting Backend (3001) + Frontend (3000)..."
+echo "==> Starting Backend (3001) + Frontend (3100)..."
 "$ROOT/scripts/kill-dev-ports.sh"
 npm run dev

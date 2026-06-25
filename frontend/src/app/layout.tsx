@@ -4,7 +4,8 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from '@/theme';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import { AuthProvider } from '@/contexts/AuthContext';
+import AppShell from '@/components/layout/AppShell';
 import { BRAND } from '@/lib/brand';
 import './globals.css';
 
@@ -36,7 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            <DashboardLayout>{children}</DashboardLayout>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+            </AuthProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

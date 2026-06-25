@@ -1,5 +1,25 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
+import { getToken, type AuthUser, type PlatformRuntime } from './auth';
+
+export interface AuthResponse {
+  accessToken: string;
+  user: AuthUser;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+  clientPlatform?: string;
+}
+
+export interface RegisterInput {
+  email: string;
+  name: string;
+  password: string;
+  clientPlatform?: string;
+}
+
 function parseApiError(body: string, status: number): string {
   if (body.trimStart().startsWith('<!DOCTYPE') || body.trimStart().startsWith('<html')) {
     return `Backend not reachable (HTTP ${status}). Start the API: cd backend && npm run start:dev`;
@@ -16,8 +36,13 @@ function parseApiError(body: string, status: number): string {
 }
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? getToken() : null;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
     ...options,
   });
   if (!res.ok) {
@@ -29,6 +54,16 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    login: (data: LoginInput) =>
+      fetchApi<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    register: (data: RegisterInput) =>
+      fetchApi<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    me: () => fetchApi<AuthUser>('/auth/me'),
+  },
+  platform: {
+    runtime: () => fetchApi<PlatformRuntime>('/platform/runtime'),
+  },
   projects: {
     list: () => fetchApi<Project[]>('/projects'),
     get: (id: string) => fetchApi<Project>(`/projects/${id}`),
