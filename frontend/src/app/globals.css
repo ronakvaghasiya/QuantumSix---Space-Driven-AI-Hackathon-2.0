@@ -73,6 +73,10 @@ code {
   }
 }
 
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(145, 158, 171, 0.28);
+}
+
 .page-enter {
   animation: fadeSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
