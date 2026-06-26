@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RepoPilot AI — Full App Screenshots</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1419;
+      color: #f4f6f8;
+      padding: 32px;
+    }
+    h1 { font-size: 1.75rem; margin-bottom: 8px; }
+    h1 span { color: #00A76F; }
+    .sub { color: #919eab; margin-bottom: 8px; }
+    .note { color: #5be8b5; font-size: 0.85rem; margin-bottom: 32px; }
+    .grid { display: flex; flex-direction: column; gap: 40px; max-width: 1200px; margin: 0 auto; }
+    figure {
+      background: #1a2332;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    figcaption {
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    figcaption a { color: #00A76F; font-size: 0.85rem; text-decoration: none; }
+    img { width: 100%; display: block; cursor: zoom-in; }
+  </style>
+</head>
+<body>
+  <h1>Repo<span>Pilot</span> AI — Full Page Screenshots</h1>
+  <p class="sub">Logged in as ronak@cp.com · All scrollable content captured</p>
+  <p class="note">Click image to open full size · Scroll down on each image to see all data</p>
+  <div class="grid" id="grid"></div>
+  <script>
+    const shots = [
+      ['01-login', 'Login Page'],
+      ['02-dashboard', 'Dashboard — full KPIs, pipeline, projects, recent tasks & MRs'],
+      ['03-projects', 'Projects — all GitLab repos'],
+      ['04-project-detail', 'Project Detail — indexing, stats, actions'],
+      ['05-knowledge-graph', 'Knowledge Graph — full graph view'],
+      ['06-tasks', 'Tasks — complete task table'],
+      ['07-tasks-upload-dialog', 'Upload CSV Dialog'],
+      ['08-task-overview', 'BB-007 — Overview, timeline, requirement'],
+      ['09-task-analysis', 'BB-007 — Analysis tab (impacted files, criteria)'],
+      ['10-task-tests-qa', 'BB-007 — Tests / QA tab'],
+      ['11-task-code-diff', 'BB-007 — Code Diff (full diff viewer)'],
+      ['12-task-validation', 'BB-007 — Validation results'],
+      ['13-task-pull-request', 'BB-007 — GitLab Pull Request'],
+      ['14-task-audit', 'BB-007 — Audit log'],
+      ['15-task-analysis-approval', 'DEMO-004 — Analysis approval pending'],
+      ['16-task-code-approval', 'DEMO-005 — Code approval + diff'],
+      ['17-reports', 'Reports — all charts & tables'],
+      ['18-settings', 'Settings — GitLab, API keys, embeddings'],
+    ];
+    const grid = document.getElementById('grid');
+    shots.forEach(([file, title]) => {
+      const fig = document.createElement('figure');
+      fig.innerHTML = `
+        <a href="${file}.png" target="_blank">
+          <img src="${file}.png" alt="${title}" loading="lazy" />
+        </a>
+        <figcaption>
+          <span>${title}</span>
+          <a href="${file}.png" target="_blank">Open full ↗</a>
+        </figcaption>`;
+      grid.appendChild(fig);
+    });
+  </script>
+</body>
+</html>

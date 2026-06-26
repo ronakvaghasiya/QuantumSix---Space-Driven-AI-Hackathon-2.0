@@ -16,7 +16,10 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:infra": "docker-compose up -d",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build:all": "cd backend && npm run build && cd ../frontend && npm run build"
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build",
+    "screenshots": "node scripts/capture-screenshots.cjs",
+    "ppt": ".venv-ppt/bin/python scripts/generate-ppt.py",
+    "demo:video": ".venv-video/bin/python scripts/generate-demo-video.py"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

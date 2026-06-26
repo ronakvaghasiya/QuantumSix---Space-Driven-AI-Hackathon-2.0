@@ -1,0 +1,133 @@
+{
+  "voice": "en-US-JennyNeural",
+  "rate": "+0%",
+  "title": "RepoPilot AI — Full End-to-End Demo",
+  "scenes": [
+    {
+      "id": "intro",
+      "image": null,
+      "title": "RepoPilot AI",
+      "narration": "Welcome to RepoPilot AI — From a Prompt to Production. This platform is built for GitLab teams. It automates the full software delivery lifecycle starting from a single CSV ticket or a simple prompt. Analysis, code generation, testing, validation, and GitLab Merge Request creation — all on one dashboard, with human approval gates at critical steps. In this video, we will walk through the complete end-to-end flow — how it works, why each step exists, and a real live example with ticket BB-007."
+    },
+    {
+      "id": "01-login",
+      "image": "01-login.png",
+      "title": "Login",
+      "narration": "We start on the login page. Team members sign in with email and password using JWT authentication. GitLab OAuth is also available for single sign-on. The left panel highlights key product capabilities — autonomous pipeline, AI agents, and native GitLab integration. For security, the platform uses bcrypt password hashing and token-based sessions."
+    },
+    {
+      "id": "02-dashboard",
+      "image": "02-dashboard.png",
+      "title": "Dashboard",
+      "narration": "After login, the dashboard opens — the engineering manager's command center. KPI cards at the top show connected projects, indexed files, total tasks, pull requests, success rate, and agent runs. The pipeline status section shows how many tasks are awaiting approval, in progress, or failed. Below, recent tasks and GitLab merge requests give the entire team visibility in one place."
+    },
+    {
+      "id": "03-projects",
+      "image": "03-projects.png",
+      "title": "Projects",
+      "narration": "The Projects page lists all connected GitLab repositories. Each repo shows its index status — Completed, Indexing, or Failed — along with files indexed, framework, and language. Use the GitLab picker to connect a new repository. Once connected, the platform clones the repo, scans all source files, and stores embeddings in the Qdrant vector database so AI can find the right files through semantic search."
+    },
+    {
+      "id": "04-project-detail",
+      "image": "04-project-detail.png",
+      "title": "Project Detail",
+      "narration": "The project detail page shows indexing progress and statistics — how many files were scanned and how many embeddings were stored. You can select the AI provider — Hugging Face Qwen or OpenAI. The re-index button refreshes the repository after webhook events. The Knowledge Graph link opens the dependency visualization for that project."
+    },
+    {
+      "id": "05-knowledge-graph",
+      "image": "05-knowledge-graph.png",
+      "title": "Knowledge Graph",
+      "narration": "The Knowledge Graph is a visual dependency map of the codebase. It shows files, components, and imports in a graph layout. When a ticket arrives, AI uses this graph plus vector search to identify impacted files — especially critical for legacy monolith repositories. Repository intelligence prevents wrong file changes and reduces regression risk."
+    },
+    {
+      "id": "06-tasks",
+      "image": "06-tasks.png",
+      "title": "Tasks List",
+      "narration": "The Tasks page lists all tickets with Task ID, Project, Status, Risk level, and Assigned Agent. Use the Upload CSV button to import new tasks. A Sample CSV download is available for demos. Statuses include PR Created, Analysis Approval Required, Code Approval Required, Validating, and more. Delete and view detail actions are available on each row."
+    },
+    {
+      "id": "07-upload",
+      "image": "07-tasks-upload-dialog.png",
+      "title": "Upload CSV",
+      "narration": "The CSV upload dialog uses a simple format — task_id and requirement columns. Select the target project — in this case, DesigntoolReact. The example ticket BB-005 asks to change the label from Sides Preview to Sides Preview 123. When you upload a single-row CSV, the task detail page opens automatically for a smooth demo experience."
+    },
+    {
+      "id": "08-overview",
+      "image": "08-task-overview.png",
+      "title": "Task Overview — BB-007",
+      "narration": "This is completed task BB-007 — a real live example. The requirement is to change the label from Sides Preview to Sides Preview 123. The Overview tab shows the nine-step pipeline timeline. All steps are complete — status is PR Created, risk is Low, and the GitLab PR Agent handled the final step. Live polling provides real-time updates while the pipeline runs."
+    },
+    {
+      "id": "09-pipeline",
+      "image": "08-task-overview.png",
+      "title": "9-Step Pipeline Explained",
+      "narration": "Here is how the pipeline works. Step one — Requirement Analysis: AI generates acceptance criteria and user stories. Step two — Repository Intelligence: Qdrant search finds impacted files. Step three — Impact Analysis: identifies regression areas. Step four — Test Generation: creates QA test cases and Playwright specs. Step five — Human Approval: the analysis gate — you must approve before any code is written. Step six — Code Generation: deterministic text replace or LLM file edit. Step seven — Human Approval: code diff review gate. Step eight — Validation: ESLint, build, Playwright, and security scan. Step nine — GitLab MR: create branch, commit, push, and open merge request."
+    },
+    {
+      "id": "10-analysis",
+      "image": "09-task-analysis.png",
+      "title": "Analysis Tab",
+      "narration": "The Analysis tab shows AI-generated acceptance criteria. Impacted files are listed with confidence scores — in this case, SidePreview/index.js was identified at ninety-eight percent confidence. Regression areas and API dependencies are also listed. Approve or Reject buttons form the first human gate. Reject restarts the pipeline; approve moves to code generation."
+    },
+    {
+      "id": "11-tests",
+      "image": "10-task-tests-qa.png",
+      "title": "Tests and QA",
+      "narration": "The Tests and QA tab shows auto-generated functional test cases. Playwright spec files cover regression scenarios. Edge cases and coverage percentage are displayed. QA verification completes before code approval — giving developers confidence that the change is safe to ship."
+    },
+    {
+      "id": "12-diff",
+      "image": "11-task-code-diff.png",
+      "title": "Code Diff",
+      "narration": "The Code Diff tab is the most important screen — a VS Code style side-by-side diff viewer. For BB-007, deterministic text replace was used — exactly two occurrences changed in SidePreview/index.js, from Sides Preview to Sides Preview 123. The implementation plan shows sixty-four files scanned and one file modified. Per-file revert and Revert All buttons are available. The full repository is verified — no hallucination, only the exact change is pushed."
+    },
+    {
+      "id": "13-validation",
+      "image": "12-task-validation.png",
+      "title": "Validation",
+      "narration": "The Validation tab runs automated checks. ESLint passes on changed files only. Prettier formatting is verified. npm run build status is shown. Playwright test results are displayed. A security secret scan also runs — if secrets are found, the merge request is blocked. On failure, the Fix Lint retry button lets you resume the pipeline."
+    },
+    {
+      "id": "14-pr",
+      "image": "13-task-pull-request.png",
+      "title": "GitLab Pull Request",
+      "narration": "The Pull Request tab shows a real GitLab Merge Request — MR number 868. The branch is feature/repopilot-bb-007. Open in GitLab launches it in the browser. In-app Approve and Merge buttons are available. A validation summary is shown. A real commit was pushed to the GitLab remote — this is not a mock demo."
+    },
+    {
+      "id": "15-audit",
+      "image": "14-task-audit.png",
+      "title": "Audit Log",
+      "narration": "The Audit tab supports enterprise governance. It records who approved the analysis, who approved the code, and when — with full timestamps. Reject history is also stored. This audit trail builds trust in AI-assisted changes and supports compliance requirements."
+    },
+    {
+      "id": "16-analysis-gate",
+      "image": "15-task-analysis-approval.png",
+      "title": "Analysis Approval Gate",
+      "narration": "Task DEMO-004 is waiting for analysis approval. The Assigned Agent column shows Your Approval — human in the loop. Before any code is written, the tech lead or product manager reviews the AI analysis. Approve, Reject, or Request Changes — the pipeline only proceeds after human approval."
+    },
+    {
+      "id": "17-code-gate",
+      "image": "16-task-code-approval.png",
+      "title": "Code Approval Gate",
+      "narration": "Task DEMO-005 is at the code approval gate — the second human gate. The developer reviews the exact diff before the merge request is created. Reject with feedback restarts the pipeline from the relevant step. This dual-gate system differentiates RepoPilot from Cursor or Copilot — governed, auditable delivery for teams."
+    },
+    {
+      "id": "18-reports",
+      "image": "17-reports.png",
+      "title": "Reports",
+      "narration": "The Reports page provides analytics for engineering managers. Task success rate trends over time. Agent performance breakdown — runs and success counts. Validation pass and fail statistics. Project-wise task distribution charts. Run npm run seed demo to populate the dashboard with sample data for presentations."
+    },
+    {
+      "id": "19-settings",
+      "image": "18-settings.png",
+      "title": "Settings",
+      "narration": "The Settings page configures integrations. GitLab Personal Access Token in glpat format. Hugging Face or OpenAI API keys. Embedding model defaults to MiniLM. Chat model is Qwen 2.5 7B Instruct. Qdrant URL can be configured here. All settings can also be overridden via environment variables."
+    },
+    {
+      "id": "outro",
+      "image": "02-dashboard.png",
+      "title": "Thank You",
+      "narration": "To summarize — RepoPilot AI is a governed SDLC copilot for GitLab teams. Upload a CSV ticket, AI runs analysis and generates code, humans approve at two gates, validation passes, and a real GitLab Merge Request is created. Cursor helps one developer type faster. RepoPilot governs the entire change from ticket to merge request for the whole team. QuantumSix — Space Driven AI Hackathon 2.0. Thank you. From a Prompt to Production."
+    }
+  ]
+}
