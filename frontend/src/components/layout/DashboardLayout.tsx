@@ -16,6 +16,7 @@ import {
   useMediaQuery,
   useTheme,
   Button,
+  alpha,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -28,6 +29,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { ReactNode, useState } from 'react';
 import { BRAND } from '@/lib/brand';
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 const NAV_WIDTH = 280;
 
@@ -62,6 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const isDark = theme.palette.mode === 'dark';
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
 
@@ -118,10 +121,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       borderRadius: 1.5,
                       mb: 0.25,
                       color: active ? 'primary.main' : 'text.secondary',
-                      bgcolor: active ? 'rgba(0, 167, 111, 0.08)' : 'transparent',
+                      bgcolor: active
+                        ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
+                        : 'transparent',
                       transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
                       '&:hover': {
-                        bgcolor: active ? 'rgba(0, 167, 111, 0.12)' : 'action.hover',
+                        bgcolor: active
+                          ? alpha(theme.palette.primary.main, isDark ? 0.22 : 0.12)
+                          : 'action.hover',
                         transform: 'translateX(2px)',
                       },
                       ...(active && {
@@ -148,7 +155,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
 
       <Box sx={{ px: 2, py: 2, borderTop: 1, borderColor: 'divider', flexShrink: 0 }}>
-        <Stack spacing={1}>
+        <Stack spacing={1.5}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              Appearance
+            </Typography>
+            <ThemeToggle />
+          </Stack>
           {user && (
             <Box>
               <Typography variant="subtitle2" fontWeight={700}>

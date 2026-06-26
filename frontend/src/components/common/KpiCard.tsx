@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, Stack, Typography, Box, Skeleton } from '@mui/material';
+import { Card, CardContent, Stack, Typography, Box, Skeleton, useTheme } from '@mui/material';
 import { ReactNode } from 'react';
 import { colorAlpha, resolveThemeColor } from '@/theme';
 
@@ -13,7 +13,8 @@ interface KpiCardProps {
 }
 
 export function KpiCard({ title, value, icon, color = 'primary.main', loading }: KpiCardProps) {
-  const resolved = resolveThemeColor(color);
+  const theme = useTheme();
+  const resolved = resolveThemeColor(color, theme);
 
   return (
     <Card
@@ -49,7 +50,7 @@ export function KpiCard({ title, value, icon, color = 'primary.main', loading }:
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              bgcolor: colorAlpha(color, 0.12),
+              bgcolor: colorAlpha(color, 0.12, theme),
               color: resolved,
               '& svg': { fontSize: 28 },
             }}

@@ -6,6 +6,7 @@ import {
   Stack,
   Typography,
   alpha,
+  useTheme,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
@@ -13,6 +14,7 @@ import MergeTypeOutlinedIcon from '@mui/icons-material/MergeTypeOutlined';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import type { ReactNode } from 'react';
 import { BRAND } from '@/lib/brand';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 const FEATURES = [
   {
@@ -41,16 +43,22 @@ export function AuthShell({
   title: string;
   subtitle: string;
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        bgcolor: 'grey.100',
-        backgroundImage: `
+        bgcolor: 'background.default',
+        backgroundImage: isDark
+          ? `radial-gradient(ellipse 80% 60% at 100% 0%, ${alpha('#00A76F', 0.08)} 0%, transparent 55%)`
+          : `
           radial-gradient(ellipse 80% 60% at 100% 0%, ${alpha('#00A76F', 0.12)} 0%, transparent 55%),
           radial-gradient(ellipse 60% 50% at 0% 100%, ${alpha('#8E33FF', 0.06)} 0%, transparent 50%)
         `,
+        transition: 'background-color 0.35s ease',
       }}
     >
       {/* Brand panel */}
@@ -177,11 +185,16 @@ export function AuthShell({
         sx={{
           flex: 1,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           p: { xs: 2.5, sm: 4, lg: 5 },
+          position: 'relative',
         }}
       >
+        <Box sx={{ position: 'absolute', top: { xs: 16, sm: 24 }, right: { xs: 16, sm: 24 } }}>
+          <ThemeToggle size="medium" />
+        </Box>
         <Box sx={{ width: '100%', maxWidth: 440 }}>
           <Stack
             direction="row"
@@ -219,8 +232,12 @@ export function AuthShell({
               p: { xs: 3, sm: 4 },
               borderRadius: 3,
               border: '1px solid',
-              borderColor: alpha('#919EAB', 0.16),
-              boxShadow: `0 12px 40px ${alpha('#141A21', 0.08)}`,
+              borderColor: alpha(theme.palette.grey[500], isDark ? 0.2 : 0.16),
+              bgcolor: 'background.paper',
+              boxShadow: isDark
+                ? `0 12px 40px ${alpha('#000', 0.35)}`
+                : `0 12px 40px ${alpha('#141A21', 0.08)}`,
+              transition: 'background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
             }}
           >
             <Box

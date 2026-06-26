@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import { Roboto, Poppins } from 'next/font/google';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import theme from '@/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeModeProvider } from '@/contexts/ThemeModeContext';
 import AppShell from '@/components/layout/AppShell';
 import { BRAND } from '@/lib/brand';
 import './globals.css';
@@ -35,12 +33,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={fontVars}>
       <body className={`${fontVars} ${roboto.className}`}>
         <AppRouterCacheProvider>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
+          <ThemeModeProvider>
             <AuthProvider>
               <AppShell>{children}</AppShell>
             </AuthProvider>
-          </ThemeProvider>
+          </ThemeModeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>
