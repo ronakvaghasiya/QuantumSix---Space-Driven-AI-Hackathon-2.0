@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RepoPilot AI — Presentation · QuantumSix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #00a76f;
+      --green-light: #5be49b;
+      --purple: #8e33ff;
+      --cyan: #00b8d9;
+      --bg: #0b0f14;
+      --surface: #141a21;
+      --card: #1a2332;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f4f6f8;
+      --muted: #919eab;
+      --slide-w: min(1280px, 96vw);
+      --slide-h: min(720px, 88vh);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0, 167, 111, 0.12), transparent 50%),
+        radial-gradient(ellipse 60% 50% at 90% 80%, rgba(142, 51, 255, 0.1), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .deck {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      display: none;
+      width: var(--slide-w);
+      height: var(--slide-h);
+      animation: fadeUp 0.45s ease;
+    }
+
+    .slide.active { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .frame {
+      width: 100%;
+      height: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Title slides ── */
+    .slide-title .frame {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 48px;
+      background:
+        linear-gradient(135deg, rgba(0, 167, 111, 0.08) 0%, transparent 40%),
+        linear-gradient(225deg, rgba(142, 51, 255, 0.06) 0%, transparent 40%),
+        var(--surface);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(0, 167, 111, 0.12);
+      border: 1px solid rgba(0, 167, 111, 0.35);
+      color: var(--green-light);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--green-light), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+      color: var(--muted);
+      max-width: 640px;
+      line-height: 1.5;
+    }
+
+    .tagline strong { color: var(--text); font-weight: 600; }
+
+    .team-line {
+      margin-top: 36px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .team-line span { color: var(--cyan); font-weight: 600; }
+
+    /* ── Split layout ── */
+    .slide-split .frame { flex-direction: row; }
+
+    .content {
+      flex: 0 0 42%;
+      padding: 40px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+    }
+
+    .step {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.5rem, 2.8vw, 2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    ul.points {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    ul.points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #c4cdd5;
+    }
+
+    ul.points li::before {
+      content: '';
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      margin-top: 7px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .visual {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent);
+    }
+
+    .visual img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ── Flow slide ── */
+    .slide-flow .frame { padding: 40px 48px; justify-content: center; }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .flow-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 14px;
+      text-align: center;
+      position: relative;
+    }
+
+    .flow-card:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--green);
+      font-size: 1.2rem;
+      z-index: 2;
+    }
+
+    .flow-icon {
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+    }
+
+    .flow-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .flow-card p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* ── Tech stack ── */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .tech-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .tech-chip h4 {
+      font-size: 0.78rem;
+      color: var(--green-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .tech-chip p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Closing ── */
+    .cta {
+      margin-top: 28px;
+      display: inline-flex;
+      padding: 12px 24px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--green), #007867);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      box-shadow: 0 8px 24px rgba(0, 167, 111, 0.35);
+    }
+
+    /* ── Controls ── */
+    .controls {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 18px;
+      background: rgba(20, 26, 33, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+    }
+
+    .controls button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .controls button:hover {
+      background: rgba(0, 167, 111, 0.15);
+      border-color: rgba(0, 167, 111, 0.4);
+    }
+
+    .progress {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .dot.active {
+      width: 24px;
+      border-radius: 4px;
+      background: var(--green);
+    }
+
+    .counter {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-width: 48px;
+      text-align: center;
+    }
+
+    .hint {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 10;
+    }
+
+    kbd {
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+    }
+
+    @media (max-width: 900px) {
+      .slide-split .frame { flex-direction: column; }
+      .content { flex: none; border-right: none; border-bottom: 1px solid var(--border); padding: 24px; }
+      .visual { min-height: 200px; }
+      .flow-grid { grid-template-columns: 1fr 1fr; }
+      .flow-card:not(:last-child)::after { display: none; }
+      .tech-grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { overflow: visible; background: #fff; color: #111; }
+      body::before { display: none; }
+      .controls, .hint { display: none; }
+      .slide { display: flex !important; page-break-after: always; height: auto; margin-bottom: 20px; }
+      .frame { box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+  <p class="hint"><kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>F</kbd> fullscreen</p>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 Title -->
+    <section class="slide slide-title active" data-title="Intro">
+      <div class="frame">
+        <div class="badge"><span class="badge-dot"></span> Hackathon 2.0</div>
+        <h1><em>RepoPilot</em> AI</h1>
+        <p class="tagline"><strong>One Prompt. Complete Feature Delivery.</strong><br />From natural language to analysed code, validated changes, and GitLab merge requests.</p>
+        <p class="team-line">Built by <span>QuantumSix</span></p>
+      </div>
+    </section>
+
+    <!-- 2 Problem -->
+    <section class="slide slide-title" data-title="Problem">
+      <div class="frame">
+        <div class="badge"><span class="badge-dot"></span> The Challenge</div>
+        <h2 style="font-family:'Space Grotesk';font-size:2rem;margin-bottom:20px;">SDLC is still too manual</h2>
+        <div class="tech-grid" style="max-width:720px;margin:0 auto;text-align:left;">
+          <div class="tech-chip"><h4>⏱ Slow</h4><p>Devs spend hours on analysis, boilerplate, and MR prep before real coding starts.</p></div>
+          <div class="tech-chip"><h4>🔀 Fragmented</h4><p>Requirements, code, tests, and reviews live in different tools with no single flow.</p></div>
+          <div class="tech-chip"><h4>📚 Context loss</h4><p>AI tools don't know your repo — generic suggestions miss architecture and patterns.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Solution flow -->
+    <section class="slide slide-flow" data-title="Solution">
+      <div class="frame">
+        <div class="step">Our Solution</div>
+        <h2>One prompt drives the full pipeline</h2>
+        <p class="desc" style="max-width:680px;">RepoPilot indexes your GitLab repo, understands the codebase, then runs autonomous AI agents — with human approval gates at every critical step.</p>
+        <div class="flow-grid">
+          <div class="flow-card"><div class="flow-icon">🔗</div><h3>Connect</h3><p>Clone & index GitLab repo into Qdrant embeddings</p></div>
+          <div class="flow-card"><div class="flow-icon">📝</div><h3>Prompt</h3><p>Upload CSV or create task with a feature request</p></div>
+          <div class="flow-card"><div class="flow-icon">🧠</div><h3>Analyse</h3><p>User stories, impacted files, risk assessment</p></div>
+          <div class="flow-card"><div class="flow-icon">⚡</div><h3>Generate</h3><p>AI writes code diffs you review & approve</p></div>
+          <div class="flow-card"><div class="flow-icon">🚀</div><h3>Ship</h3><p>Validation, tests, GitLab MR — done</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Login -->
+    <section class="slide slide-split" data-title="Login">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 1 · Access</div>
+          <h2>Secure team login</h2>
+          <p class="desc">JWT auth for the whole team — same flow on Windows & Ubuntu. Register once, collaborate instantly.</p>
+          <ul class="points">
+            <li>Email + password authentication</li>
+            <li>Protected routes across the platform</li>
+            <li>Light / dark mode from day one</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/01-login-ppt.png" alt="Login screen" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 Dashboard -->
+    <section class="slide slide-split" data-title="Dashboard">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 2 · Overview</div>
+          <h2>Command centre dashboard</h2>
+          <p class="desc">Everything at a glance — projects, active tasks, merge requests, and live indexing status.</p>
+          <ul class="points">
+            <li>Real-time KPI cards & pipeline status</li>
+            <li>Recent tasks and MR activity feed</li>
+            <li>Project health & embedding progress</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/02-dashboard-ppt.png" alt="Dashboard" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 Projects -->
+    <section class="slide slide-split" data-title="Projects">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 3 · Repository</div>
+          <h2>Connect GitLab projects</h2>
+          <p class="desc">Link real repositories — RepoPilot clones, parses files, and builds a searchable knowledge base.</p>
+          <ul class="points">
+            <li>Multi-project support from one dashboard</li>
+            <li>Background indexing with live progress</li>
+            <li>Embeddings stored in Qdrant vector DB</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/04-project-detail-ppt.png" alt="Project detail" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 Knowledge Graph -->
+    <section class="slide slide-split" data-title="Knowledge">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 4 · Intelligence</div>
+          <h2>Codebase knowledge graph</h2>
+          <p class="desc">Visual map of files, modules, and relationships — AI agents use this context for accurate, repo-aware output.</p>
+          <ul class="points">
+            <li>Full codebase structure visualised</li>
+            <li>Semantic search via Hugging Face embeddings</li>
+            <li>Context-aware agent decisions</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/05-knowledge-graph-ppt.png" alt="Knowledge graph" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 Tasks -->
+    <section class="slide slide-split" data-title="Tasks">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 5 · Work</div>
+          <h2>AI task pipeline</h2>
+          <p class="desc">Upload a CSV batch or create tasks manually — each runs an autonomous multi-agent workflow.</p>
+          <ul class="points">
+            <li>Analysis → Codegen → Validation → MR</li>
+            <li>Status tracking per pipeline stage</li>
+            <li>Human approval gates before merge</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/08-task-overview-ppt.png" alt="Task overview" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 Analysis -->
+    <section class="slide slide-split" data-title="Analysis">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 6 · Requirement Agent</div>
+          <h2>Smart requirement analysis</h2>
+          <p class="desc">The AI reads your prompt against indexed repo knowledge and produces structured deliverables.</p>
+          <ul class="points">
+            <li>User stories & acceptance criteria</li>
+            <li>Impacted files with risk scoring</li>
+            <li>Approve or reject before code runs</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/09-task-analysis-ppt.png" alt="Task analysis" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 Code -->
+    <section class="slide slide-split" data-title="Codegen">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 7 · Code Agent</div>
+          <h2>Generated code you control</h2>
+          <p class="desc">Review every diff file-by-file. Nothing merges without your explicit approval.</p>
+          <ul class="points">
+            <li>Side-by-side diff viewer</li>
+            <li>Per-file approve / reject actions</li>
+            <li>Revert option if changes miss the mark</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/11-task-code-diff-ppt.png" alt="Code diff" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 Ship -->
+    <section class="slide slide-split" data-title="Ship">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 8 · Deliver</div>
+          <h2>Validate & open merge request</h2>
+          <p class="desc">Automated validation, QA checks, and direct GitLab MR creation — feature delivery end-to-end.</p>
+          <ul class="points">
+            <li>Validation & test results in-app</li>
+            <li>GitLab MR linked from task page</li>
+            <li>Full audit trail for compliance</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/13-task-pull-request-ppt.png" alt="Pull request" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 Reports -->
+    <section class="slide slide-split" data-title="Reports">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 9 · Insights</div>
+          <h2>Team analytics & reports</h2>
+          <p class="desc">Leadership view — task breakdowns, agent activity, QA summaries, and delivery metrics.</p>
+          <ul class="points">
+            <li>Status charts & trend overview</li>
+            <li>Agent performance visibility</li>
+            <li>Export-ready team reporting</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/17-reports-ppt.png" alt="Reports" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 Settings -->
+    <section class="slide slide-split" data-title="Settings">
+      <div class="frame">
+        <div class="content">
+          <div class="step">Step 10 · Configure</div>
+          <h2>Integrations & settings</h2>
+          <p class="desc">Wire up GitLab OAuth, choose OpenAI or Hugging Face, and manage API keys securely.</p>
+          <ul class="points">
+            <li>GitLab connection & webhooks</li>
+            <li>Flexible AI provider switching</li>
+            <li>Cross-platform local dev setup</li>
+          </ul>
+        </div>
+        <div class="visual">
+          <img src="../ppt-cache/18-settings-ppt.png" alt="Settings" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 Tech -->
+    <section class="slide slide-flow" data-title="Tech">
+      <div class="frame">
+        <div class="step">Under the hood</div>
+        <h2>Modern, production-ready stack</h2>
+        <div class="tech-grid">
+          <div class="tech-chip"><h4>Frontend</h4><p>Next.js 14 · React · MUI · TypeScript · Light/Dark theme</p></div>
+          <div class="tech-chip"><h4>Backend</h4><p>NestJS · PostgreSQL · JWT Auth · REST API · GitLab SDK</p></div>
+          <div class="tech-chip"><h4>AI & Data</h4><p>Qdrant vectors · HF Embeddings · OpenAI / HF LLMs · n8n agents</p></div>
+          <div class="tech-chip"><h4>DevOps</h4><p>Cross-platform Node scripts · Windows + Ubuntu · No Docker required locally</p></div>
+          <div class="tech-chip"><h4>Security</h4><p>JWT guards · Encrypted API keys · Approval gates · Audit logs</p></div>
+          <div class="tech-chip"><h4>Demo</h4><p>Automated screen recording · Indian English TTS · Word-synced subtitles</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 Close -->
+    <section class="slide slide-title" data-title="Close">
+      <div class="frame">
+        <div class="badge"><span class="badge-dot"></span> Thank You</div>
+        <h1><em>RepoPilot</em> AI</h1>
+        <p class="tagline"><strong>One Prompt. Complete Feature Delivery.</strong><br />Ask us anything — live demo ready.</p>
+        <div class="cta">QuantumSix · Hackathon 2.0</div>
+        <p class="team-line" style="margin-top:24px;">Demo: demo@quantumsix.dev · localhost:3100</p>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="controls" aria-label="Slide navigation">
+    <button type="button" id="prev" aria-label="Previous">←</button>
+    <div class="progress" id="dots"></div>
+    <span class="counter" id="counter">1 / 15</span>
+    <button type="button" id="next" aria-label="Next">→</button>
+  </nav>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    const dotsEl = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+    let idx = 0;
+
+    slides.forEach((_, i) => {
+      const d = document.createElement('span');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      d.title = slides[i].dataset.title || `Slide ${i + 1}`;
+      d.addEventListener('click', () => go(i));
+      dotsEl.appendChild(d);
+    });
+
+    function go(n) {
+      slides[idx].classList.remove('active');
+      idx = (n + slides.length) % slides.length;
+      slides[idx].classList.add('active');
+      document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+      counter.textContent = `${idx + 1} / ${slides.length}`;
+      document.title = `${slides[idx].dataset.title || 'Slide'} · RepoPilot AI`;
+    }
+
+    document.getElementById('prev').onclick = () => go(idx - 1);
+    document.getElementById('next').onclick = () => go(idx + 1);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(idx + 1); }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+      if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+      if (e.key === 'Home') go(0);
+      if (e.key === 'End') go(slides.length - 1);
+    });
+  </script>
+</body>
+</html>

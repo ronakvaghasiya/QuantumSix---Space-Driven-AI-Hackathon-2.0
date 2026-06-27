@@ -1,0 +1,97 @@
+{
+  "id": "07-index",
+  "narration": "Indexing runs in the background. Embeddings are stored in Qdrant, and progress is shown live on the screen.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\07-index.mp3",
+  "words": [
+    {
+      "text": "Indexing",
+      "offset": 0.102625,
+      "duration": 0.552625
+    },
+    {
+      "text": "runs",
+      "offset": 0.65525,
+      "duration": 0.407875
+    },
+    {
+      "text": "in",
+      "offset": 1.142125,
+      "duration": 0.10525
+    },
+    {
+      "text": "the",
+      "offset": 1.260541,
+      "duration": 0.131583
+    },
+    {
+      "text": "background",
+      "offset": 1.392125,
+      "duration": 0.684208
+    },
+    {
+      "text": "Embeddings",
+      "offset": 3.026333,
+      "duration": 0.60525
+    },
+    {
+      "text": "are",
+      "offset": 3.710541,
+      "duration": 0.236833
+    },
+    {
+      "text": "stored",
+      "offset": 3.947375,
+      "duration": 0.460541
+    },
+    {
+      "text": "in",
+      "offset": 4.486833,
+      "duration": 0.14475
+    },
+    {
+      "text": "Qdrant",
+      "offset": 4.671041,
+      "duration": 0.64475
+    },
+    {
+      "text": "and",
+      "offset": 5.671041,
+      "duration": 0.184208
+    },
+    {
+      "text": "progress",
+      "offset": 5.85525,
+      "duration": 0.60525
+    },
+    {
+      "text": "is",
+      "offset": 6.578958,
+      "duration": 0.236833
+    },
+    {
+      "text": "shown",
+      "offset": 6.815791,
+      "duration": 0.39475
+    },
+    {
+      "text": "live",
+      "offset": 7.210541,
+      "duration": 0.381583
+    },
+    {
+      "text": "on",
+      "offset": 7.684208,
+      "duration": 0.171041
+    },
+    {
+      "text": "the",
+      "offset": 7.85525,
+      "duration": 0.118416
+    },
+    {
+      "text": "screen",
+      "offset": 7.973666,
+      "duration": 0.552625
+    }
+  ]
+}

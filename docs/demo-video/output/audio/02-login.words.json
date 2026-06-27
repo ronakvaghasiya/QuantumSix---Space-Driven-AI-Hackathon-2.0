@@ -1,0 +1,107 @@
+{
+  "id": "02-login",
+  "narration": "Let us sign in to the platform. The same login works on Windows and Ubuntu, with no separate setup required.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\02-login.mp3",
+  "words": [
+    {
+      "text": "Let",
+      "offset": 0.102625,
+      "duration": 0.236833
+    },
+    {
+      "text": "us",
+      "offset": 0.352625,
+      "duration": 0.210541
+    },
+    {
+      "text": "sign",
+      "offset": 0.615791,
+      "duration": 0.460541
+    },
+    {
+      "text": "in",
+      "offset": 1.15525,
+      "duration": 0.171041
+    },
+    {
+      "text": "to",
+      "offset": 1.339458,
+      "duration": 0.10525
+    },
+    {
+      "text": "the",
+      "offset": 1.44475,
+      "duration": 0.144708
+    },
+    {
+      "text": "platform",
+      "offset": 1.589458,
+      "duration": 0.75
+    },
+    {
+      "text": "The",
+      "offset": 3.236833,
+      "duration": 0.092125
+    },
+    {
+      "text": "same",
+      "offset": 3.328958,
+      "duration": 0.407875
+    },
+    {
+      "text": "login",
+      "offset": 3.736833,
+      "duration": 0.434208
+    },
+    {
+      "text": "works",
+      "offset": 4.171041,
+      "duration": 0.513166
+    },
+    {
+      "text": "on",
+      "offset": 4.763166,
+      "duration": 0.184208
+    },
+    {
+      "text": "Windows",
+      "offset": 4.947375,
+      "duration": 0.657875
+    },
+    {
+      "text": "and",
+      "offset": 5.710541,
+      "duration": 0.223666
+    },
+    {
+      "text": "Ubuntu",
+      "offset": 5.947375,
+      "duration": 0.539458
+    },
+    {
+      "text": "with",
+      "offset": 6.868416,
+      "duration": 0.223666
+    },
+    {
+      "text": "no",
+      "offset": 7.157875,
+      "duration": 0.263166
+    },
+    {
+      "text": "separate",
+      "offset": 7.434208,
+      "duration": 0.592125
+    },
+    {
+      "text": "setup",
+      "offset": 8.026333,
+      "duration": 0.434208
+    },
+    {
+      "text": "required",
+      "offset": 8.486833,
+      "duration": 0.697375
+    }
+  ]
+}

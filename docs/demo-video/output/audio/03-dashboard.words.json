@@ -1,0 +1,127 @@
+{
+  "id": "03-dashboard",
+  "narration": "And we land on the main dashboard. Here you can see project count, active tasks, merge requests, and indexing status, everything at one glance.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\03-dashboard.mp3",
+  "words": [
+    {
+      "text": "And",
+      "offset": 0.102625,
+      "duration": 0.223666
+    },
+    {
+      "text": "we",
+      "offset": 0.326333,
+      "duration": 0.2105
+    },
+    {
+      "text": "land",
+      "offset": 0.536833,
+      "duration": 0.39475
+    },
+    {
+      "text": "on",
+      "offset": 1.010541,
+      "duration": 0.171041
+    },
+    {
+      "text": "the",
+      "offset": 1.19475,
+      "duration": 0.118416
+    },
+    {
+      "text": "main",
+      "offset": 1.313166,
+      "duration": 0.368416
+    },
+    {
+      "text": "dashboard",
+      "offset": 1.681583,
+      "duration": 0.736833
+    },
+    {
+      "text": "Here",
+      "offset": 3.35525,
+      "duration": 0.289458
+    },
+    {
+      "text": "you",
+      "offset": 3.64475,
+      "duration": 0.14475
+    },
+    {
+      "text": "can",
+      "offset": 3.815791,
+      "duration": 0.276333
+    },
+    {
+      "text": "see",
+      "offset": 4.092125,
+      "duration": 0.210541
+    },
+    {
+      "text": "project",
+      "offset": 4.328958,
+      "duration": 0.473666
+    },
+    {
+      "text": "count",
+      "offset": 4.815791,
+      "duration": 0.421041
+    },
+    {
+      "text": "active",
+      "offset": 5.473666,
+      "duration": 0.421041
+    },
+    {
+      "text": "tasks",
+      "offset": 5.921041,
+      "duration": 0.5
+    },
+    {
+      "text": "merge",
+      "offset": 6.776333,
+      "duration": 0.381583
+    },
+    {
+      "text": "requests",
+      "offset": 7.184208,
+      "duration": 0.671041
+    },
+    {
+      "text": "and",
+      "offset": 8.039458,
+      "duration": 0.263166
+    },
+    {
+      "text": "indexing",
+      "offset": 8.368416,
+      "duration": 0.592125
+    },
+    {
+      "text": "status",
+      "offset": 8.960541,
+      "duration": 0.565791
+    },
+    {
+      "text": "everything",
+      "offset": 9.815791,
+      "duration": 0.618416
+    },
+    {
+      "text": "at",
+      "offset": 10.5,
+      "duration": 0.236833
+    },
+    {
+      "text": "one",
+      "offset": 10.736833,
+      "duration": 0.328958
+    },
+    {
+      "text": "glance",
+      "offset": 11.092125,
+      "duration": 0.552625
+    }
+  ]
+}

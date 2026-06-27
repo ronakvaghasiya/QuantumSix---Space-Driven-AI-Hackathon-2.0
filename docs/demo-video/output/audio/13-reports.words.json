@@ -1,0 +1,77 @@
+{
+  "id": "13-reports",
+  "narration": "The Reports page gives team-level analytics, task status breakdown, agent activity, and QA summary.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\13-reports.mp3",
+  "words": [
+    {
+      "text": "The",
+      "offset": 0.102625,
+      "duration": 0.078958
+    },
+    {
+      "text": "Reports",
+      "offset": 0.181583,
+      "duration": 0.565791
+    },
+    {
+      "text": "page",
+      "offset": 0.747375,
+      "duration": 0.407875
+    },
+    {
+      "text": "gives",
+      "offset": 1.15525,
+      "duration": 0.342125
+    },
+    {
+      "text": "team-level",
+      "offset": 1.497375,
+      "duration": 0.60525
+    },
+    {
+      "text": "analytics",
+      "offset": 2.15525,
+      "duration": 0.75
+    },
+    {
+      "text": "task",
+      "offset": 3.326333,
+      "duration": 0.315791
+    },
+    {
+      "text": "status",
+      "offset": 3.65525,
+      "duration": 0.513166
+    },
+    {
+      "text": "breakdown",
+      "offset": 4.168416,
+      "duration": 0.723666
+    },
+    {
+      "text": "agent",
+      "offset": 5.102625,
+      "duration": 0.407875
+    },
+    {
+      "text": "activity",
+      "offset": 5.576333,
+      "duration": 0.64475
+    },
+    {
+      "text": "and",
+      "offset": 6.471041,
+      "duration": 0.263166
+    },
+    {
+      "text": "QA",
+      "offset": 6.734208,
+      "duration": 0.35525
+    },
+    {
+      "text": "summary",
+      "offset": 7.089458,
+      "duration": 0.513166
+    }
+  ]
+}

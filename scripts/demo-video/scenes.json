@@ -1,0 +1,62 @@
+[
+  {
+    "id": "01-intro",
+    "narration": "Hello everyone. Welcome to RepoPilot AI, built by team QuantumSix for Hackathon 2.0. Our tagline is simple: One Prompt. Complete Feature Delivery."
+  },
+  {
+    "id": "02-login",
+    "narration": "Let us sign in to the platform. The same login works on Windows and Ubuntu, with no separate setup required."
+  },
+  {
+    "id": "03-dashboard",
+    "narration": "And we land on the main dashboard. Here you can see project count, active tasks, merge requests, and indexing status, everything at one glance."
+  },
+  {
+    "id": "04-nav",
+    "narration": "RepoPilot gives a complete SDLC view, from repository indexing to AI-generated code and GitLab merge requests. Navigation is on the left side."
+  },
+  {
+    "id": "05-theme",
+    "narration": "We also support light and dark mode, which is useful for long coding sessions."
+  },
+  {
+    "id": "06-projects",
+    "narration": "Now let us connect a real GitLab repository. RepoPilot clones the repo, parses all files, and builds a knowledge graph of the codebase."
+  },
+  {
+    "id": "07-index",
+    "narration": "Indexing runs in the background. Embeddings are stored in Qdrant, and progress is shown live on the screen."
+  },
+  {
+    "id": "08-upload-task",
+    "narration": "Now we create a live demo task. Task DT-0004 renames the label Sides Preview to Sides Preview 123. We upload it from CSV in one click."
+  },
+  {
+    "id": "09-agents-run",
+    "narration": "Watch the agents start working. Requirement analysis, repository intelligence, and impact analysis run automatically on our indexed codebase."
+  },
+  {
+    "id": "10-analysis",
+    "narration": "Analysis completes with user stories and test cases. We approve it, and the Code Generation Agent takes over the label change."
+  },
+  {
+    "id": "11-codegen",
+    "narration": "Here is the generated diff for the rename. Every file change is visible on the Code Diff tab before we approve and ship."
+  },
+  {
+    "id": "12-validation",
+    "narration": "Validation and QA run automatically. Tests execute and a GitLab merge request opens. One prompt, complete feature delivery."
+  },
+  {
+    "id": "13-reports",
+    "narration": "The Reports page gives team-level analytics, task status breakdown, agent activity, and QA summary."
+  },
+  {
+    "id": "14-settings",
+    "narration": "Under Integrations, we connect GitLab and configure OpenAI or Hugging Face as the AI provider. API keys are stored securely."
+  },
+  {
+    "id": "15-closing",
+    "narration": "RepoPilot AI. One Prompt. Complete Feature Delivery. Built by QuantumSix. Thank you for watching."
+  }
+]

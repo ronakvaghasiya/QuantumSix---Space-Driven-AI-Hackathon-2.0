@@ -1,0 +1,107 @@
+{
+  "id": "09-task-detail",
+  "narration": "The Requirement Agent analyses the task against indexed repository knowledge. It produces user stories, impacted files, and risk assessment automatically.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\09-task-detail.mp3",
+  "words": [
+    {
+      "text": "The",
+      "offset": 0.102625,
+      "duration": 0.078958
+    },
+    {
+      "text": "Requirement",
+      "offset": 0.181583,
+      "duration": 0.75
+    },
+    {
+      "text": "Agent",
+      "offset": 1.023666,
+      "duration": 0.381583
+    },
+    {
+      "text": "analyses",
+      "offset": 1.471041,
+      "duration": 0.736833
+    },
+    {
+      "text": "the",
+      "offset": 2.207875,
+      "duration": 0.157875
+    },
+    {
+      "text": "task",
+      "offset": 2.365791,
+      "duration": 0.421041
+    },
+    {
+      "text": "against",
+      "offset": 2.852625,
+      "duration": 0.421041
+    },
+    {
+      "text": "indexed",
+      "offset": 3.352625,
+      "duration": 0.5
+    },
+    {
+      "text": "repository",
+      "offset": 3.918416,
+      "duration": 0.697375
+    },
+    {
+      "text": "knowledge",
+      "offset": 4.615791,
+      "duration": 0.486833
+    },
+    {
+      "text": "It",
+      "offset": 6.092125,
+      "duration": 0.131583
+    },
+    {
+      "text": "produces",
+      "offset": 6.25,
+      "duration": 0.684208
+    },
+    {
+      "text": "user",
+      "offset": 6.934208,
+      "duration": 0.407875
+    },
+    {
+      "text": "stories",
+      "offset": 7.342125,
+      "duration": 0.631583
+    },
+    {
+      "text": "impacted",
+      "offset": 8.223666,
+      "duration": 0.64475
+    },
+    {
+      "text": "files",
+      "offset": 8.868416,
+      "duration": 0.539458
+    },
+    {
+      "text": "and",
+      "offset": 9.578958,
+      "duration": 0.236833
+    },
+    {
+      "text": "risk",
+      "offset": 9.815791,
+      "duration": 0.302625
+    },
+    {
+      "text": "assessment",
+      "offset": 10.171041,
+      "duration": 0.565791
+    },
+    {
+      "text": "automatically",
+      "offset": 10.815791,
+      "duration": 0.815791
+    }
+  ]
+}

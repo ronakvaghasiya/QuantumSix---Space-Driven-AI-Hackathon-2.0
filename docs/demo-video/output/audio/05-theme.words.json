@@ -1,0 +1,77 @@
+{
+  "id": "05-theme",
+  "narration": "We also support light and dark mode, which is useful for long coding sessions.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\05-theme.mp3",
+  "words": [
+    {
+      "text": "We",
+      "offset": 0.102625,
+      "duration": 0.14475
+    },
+    {
+      "text": "also",
+      "offset": 0.339458,
+      "duration": 0.434208
+    },
+    {
+      "text": "support",
+      "offset": 0.773666,
+      "duration": 0.526333
+    },
+    {
+      "text": "light",
+      "offset": 1.339458,
+      "duration": 0.407875
+    },
+    {
+      "text": "and",
+      "offset": 1.839458,
+      "duration": 0.263166
+    },
+    {
+      "text": "dark",
+      "offset": 2.102625,
+      "duration": 0.39475
+    },
+    {
+      "text": "mode",
+      "offset": 2.497375,
+      "duration": 0.421041
+    },
+    {
+      "text": "which",
+      "offset": 3.286833,
+      "duration": 0.263166
+    },
+    {
+      "text": "is",
+      "offset": 3.55,
+      "duration": 0.157875
+    },
+    {
+      "text": "useful",
+      "offset": 3.707875,
+      "duration": 0.578958
+    },
+    {
+      "text": "for",
+      "offset": 4.286833,
+      "duration": 0.289458
+    },
+    {
+      "text": "long",
+      "offset": 4.576333,
+      "duration": 0.394708
+    },
+    {
+      "text": "coding",
+      "offset": 4.971041,
+      "duration": 0.39475
+    },
+    {
+      "text": "sessions",
+      "offset": 5.365791,
+      "duration": 0.631583
+    }
+  ]
+}

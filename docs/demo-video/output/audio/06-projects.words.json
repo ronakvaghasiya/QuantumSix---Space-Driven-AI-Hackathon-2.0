@@ -1,0 +1,122 @@
+{
+  "id": "06-projects",
+  "narration": "Now let us connect a real GitLab repository. RepoPilot clones the repo, parses all files, and builds a knowledge graph of the codebase.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\06-projects.mp3",
+  "words": [
+    {
+      "text": "Now",
+      "offset": 0.102625,
+      "duration": 0.236833
+    },
+    {
+      "text": "let",
+      "offset": 0.339458,
+      "duration": 0.289458
+    },
+    {
+      "text": "us",
+      "offset": 0.628958,
+      "duration": 0.2105
+    },
+    {
+      "text": "connect",
+      "offset": 0.839458,
+      "duration": 0.407875
+    },
+    {
+      "text": "a",
+      "offset": 1.326333,
+      "duration": 0.092083
+    },
+    {
+      "text": "real",
+      "offset": 1.418416,
+      "duration": 0.368416
+    },
+    {
+      "text": "GitLab",
+      "offset": 1.786833,
+      "duration": 0.539458
+    },
+    {
+      "text": "repository",
+      "offset": 2.326333,
+      "duration": 0.723666
+    },
+    {
+      "text": "RepoPilot",
+      "offset": 3.973666,
+      "duration": 0.736833
+    },
+    {
+      "text": "clones",
+      "offset": 4.763166,
+      "duration": 0.434208
+    },
+    {
+      "text": "the",
+      "offset": 5.197375,
+      "duration": 0.157875
+    },
+    {
+      "text": "repo",
+      "offset": 5.35525,
+      "duration": 0.473666
+    },
+    {
+      "text": "parses",
+      "offset": 6.184208,
+      "duration": 0.5
+    },
+    {
+      "text": "all",
+      "offset": 6.776333,
+      "duration": 0.223666
+    },
+    {
+      "text": "files",
+      "offset": 7.0,
+      "duration": 0.552625
+    },
+    {
+      "text": "and",
+      "offset": 7.736833,
+      "duration": 0.210541
+    },
+    {
+      "text": "builds",
+      "offset": 7.947375,
+      "duration": 0.447375
+    },
+    {
+      "text": "a",
+      "offset": 8.473666,
+      "duration": 0.092125
+    },
+    {
+      "text": "knowledge",
+      "offset": 8.565791,
+      "duration": 0.473666
+    },
+    {
+      "text": "graph",
+      "offset": 9.078958,
+      "duration": 0.421041
+    },
+    {
+      "text": "of",
+      "offset": 9.565791,
+      "duration": 0.157875
+    },
+    {
+      "text": "the",
+      "offset": 9.723666,
+      "duration": 0.118416
+    },
+    {
+      "text": "codebase",
+      "offset": 9.842125,
+      "duration": 0.697375
+    }
+  ]
+}

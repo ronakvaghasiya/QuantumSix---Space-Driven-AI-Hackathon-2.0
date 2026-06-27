@@ -1,0 +1,97 @@
+{
+  "id": "12-validation",
+  "narration": "Validation and QA run automatically. Tests execute and a GitLab merge request opens. One prompt, complete feature delivery.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\12-validation.mp3",
+  "words": [
+    {
+      "text": "Validation",
+      "offset": 0.102625,
+      "duration": 0.763166
+    },
+    {
+      "text": "and",
+      "offset": 0.971041,
+      "duration": 0.276333
+    },
+    {
+      "text": "QA",
+      "offset": 1.247375,
+      "duration": 0.368416
+    },
+    {
+      "text": "run",
+      "offset": 1.628958,
+      "duration": 0.315791
+    },
+    {
+      "text": "automatically",
+      "offset": 2.023666,
+      "duration": 0.881583
+    },
+    {
+      "text": "Tests",
+      "offset": 3.842125,
+      "duration": 0.381583
+    },
+    {
+      "text": "execute",
+      "offset": 4.289458,
+      "duration": 0.64475
+    },
+    {
+      "text": "and",
+      "offset": 5.052625,
+      "duration": 0.223666
+    },
+    {
+      "text": "a",
+      "offset": 5.289458,
+      "duration": 0.039458
+    },
+    {
+      "text": "GitLab",
+      "offset": 5.328958,
+      "duration": 0.578916
+    },
+    {
+      "text": "merge",
+      "offset": 5.907875,
+      "duration": 0.447375
+    },
+    {
+      "text": "request",
+      "offset": 6.421041,
+      "duration": 0.513166
+    },
+    {
+      "text": "opens",
+      "offset": 7.013166,
+      "duration": 0.526333
+    },
+    {
+      "text": "One",
+      "offset": 8.460541,
+      "duration": 0.276291
+    },
+    {
+      "text": "prompt",
+      "offset": 8.736833,
+      "duration": 0.486833
+    },
+    {
+      "text": "complete",
+      "offset": 9.473666,
+      "duration": 0.486833
+    },
+    {
+      "text": "feature",
+      "offset": 9.960541,
+      "duration": 0.513125
+    },
+    {
+      "text": "delivery",
+      "offset": 10.473666,
+      "duration": 0.526333
+    }
+  ]
+}

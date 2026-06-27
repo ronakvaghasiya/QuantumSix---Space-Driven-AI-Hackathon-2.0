@@ -1,0 +1,107 @@
+{
+  "id": "08-tasks",
+  "narration": "Next, let us look at AI tasks. Each task runs an autonomous pipeline: Analysis, Code Generation, Validation, and Merge Request.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\08-tasks.mp3",
+  "words": [
+    {
+      "text": "Next",
+      "offset": 0.102625,
+      "duration": 0.39475
+    },
+    {
+      "text": "let",
+      "offset": 0.721041,
+      "duration": 0.25
+    },
+    {
+      "text": "us",
+      "offset": 0.984208,
+      "duration": 0.210541
+    },
+    {
+      "text": "look",
+      "offset": 1.19475,
+      "duration": 0.289458
+    },
+    {
+      "text": "at",
+      "offset": 1.563166,
+      "duration": 0.236833
+    },
+    {
+      "text": "AI",
+      "offset": 1.865791,
+      "duration": 0.289458
+    },
+    {
+      "text": "tasks",
+      "offset": 2.168416,
+      "duration": 0.565791
+    },
+    {
+      "text": "Each",
+      "offset": 3.64475,
+      "duration": 0.263166
+    },
+    {
+      "text": "task",
+      "offset": 3.947375,
+      "duration": 0.407875
+    },
+    {
+      "text": "runs",
+      "offset": 4.421041,
+      "duration": 0.39475
+    },
+    {
+      "text": "an",
+      "offset": 4.89475,
+      "duration": 0.210541
+    },
+    {
+      "text": "autonomous",
+      "offset": 5.171041,
+      "duration": 0.657875
+    },
+    {
+      "text": "pipeline",
+      "offset": 5.842125,
+      "duration": 0.657875
+    },
+    {
+      "text": "Analysis",
+      "offset": 6.736833,
+      "duration": 0.736833
+    },
+    {
+      "text": "Code",
+      "offset": 7.842125,
+      "duration": 0.236833
+    },
+    {
+      "text": "Generation",
+      "offset": 8.078958,
+      "duration": 0.723666
+    },
+    {
+      "text": "Validation",
+      "offset": 9.052625,
+      "duration": 0.776333
+    },
+    {
+      "text": "and",
+      "offset": 10.065791,
+      "duration": 0.236833
+    },
+    {
+      "text": "Merge",
+      "offset": 10.302625,
+      "duration": 0.407875
+    },
+    {
+      "text": "Request",
+      "offset": 10.776333,
+      "duration": 0.552625
+    }
+  ]
+}

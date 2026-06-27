@@ -11,17 +11,18 @@
     "start:local": "node scripts/start-local.cjs",
     "stop:local": "node scripts/stop-infra-local.cjs",
     "repair:qdrant": "node scripts/repair-qdrant.cjs",
+    "demo:video": "node scripts/demo-video/build.cjs",
+    "presentation": "start docs/presentation/index.html",
     "dev:n8n": "node scripts/start-n8n-local.cjs",
     "dev:backend": "cd backend && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:infra": "docker-compose up -d",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build:all": "cd backend && npm run build && cd ../frontend && npm run build",
-    "screenshots": "node scripts/capture-screenshots.cjs",
-    "ppt": ".venv-ppt/bin/python scripts/generate-ppt.py",
-    "demo:video": ".venv-video/bin/python scripts/generate-demo-video.py"
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "concurrently": "^9.1.0",
+    "playwright": "^1.51.0"
   }
 }

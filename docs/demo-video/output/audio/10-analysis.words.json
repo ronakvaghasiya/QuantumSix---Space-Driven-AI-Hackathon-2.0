@@ -1,0 +1,112 @@
+{
+  "id": "10-analysis",
+  "narration": "Analysis completes with user stories and test cases. We approve it, and the Code Generation Agent takes over the label change.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\10-analysis.mp3",
+  "words": [
+    {
+      "text": "Analysis",
+      "offset": 0.102625,
+      "duration": 0.60525
+    },
+    {
+      "text": "completes",
+      "offset": 0.721041,
+      "duration": 0.64475
+    },
+    {
+      "text": "with",
+      "offset": 1.431583,
+      "duration": 0.263166
+    },
+    {
+      "text": "user",
+      "offset": 1.760541,
+      "duration": 0.434208
+    },
+    {
+      "text": "stories",
+      "offset": 2.19475,
+      "duration": 0.64475
+    },
+    {
+      "text": "and",
+      "offset": 2.957875,
+      "duration": 0.276333
+    },
+    {
+      "text": "test",
+      "offset": 3.234208,
+      "duration": 0.328958
+    },
+    {
+      "text": "cases",
+      "offset": 3.589458,
+      "duration": 0.592125
+    },
+    {
+      "text": "We",
+      "offset": 5.10525,
+      "duration": 0.171041
+    },
+    {
+      "text": "approve",
+      "offset": 5.328958,
+      "duration": 0.434208
+    },
+    {
+      "text": "it",
+      "offset": 5.763166,
+      "duration": 0.25
+    },
+    {
+      "text": "and",
+      "offset": 6.289458,
+      "duration": 0.184208
+    },
+    {
+      "text": "the",
+      "offset": 6.473666,
+      "duration": 0.157875
+    },
+    {
+      "text": "Code",
+      "offset": 6.631583,
+      "duration": 0.35525
+    },
+    {
+      "text": "Generation",
+      "offset": 6.986833,
+      "duration": 0.736833
+    },
+    {
+      "text": "Agent",
+      "offset": 7.828958,
+      "duration": 0.421041
+    },
+    {
+      "text": "takes",
+      "offset": 8.315791,
+      "duration": 0.421041
+    },
+    {
+      "text": "over",
+      "offset": 8.815791,
+      "duration": 0.315791
+    },
+    {
+      "text": "the",
+      "offset": 9.131583,
+      "duration": 0.14475
+    },
+    {
+      "text": "label",
+      "offset": 9.276333,
+      "duration": 0.447333
+    },
+    {
+      "text": "change",
+      "offset": 9.723666,
+      "duration": 0.434208
+    }
+  ]
+}

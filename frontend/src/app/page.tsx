@@ -40,8 +40,6 @@ import {
 import { colorAlpha } from '@/theme';
 import { BRAND } from '@/lib/brand';
 import Link from 'next/link';
-import SearchInput from '@/components/common/SearchInput';
-import EmptyState from '@/components/common/EmptyState';
 
 function projectIconColor(status: string): string {
   if (status === 'completed') return 'success.main';
@@ -132,7 +130,6 @@ export default function DashboardPage() {
   const [recentPrs, setRecentPrs] = useState<PullRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const refresh = () => {
     Promise.all([
@@ -165,40 +162,6 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredProjects = projects.filter((p) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      p.name.toLowerCase().includes(q) ||
-      (p.framework && p.framework.toLowerCase().includes(q)) ||
-      (p.language && p.language.toLowerCase().includes(q)) ||
-      (p.repositoryUrl && p.repositoryUrl.toLowerCase().includes(q))
-    );
-  });
-
-  const filteredTasks = recentTasks.filter((t) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      t.taskId.toLowerCase().includes(q) ||
-      (t.project?.name && t.project.name.toLowerCase().includes(q)) ||
-      t.status.toLowerCase().includes(q) ||
-      (t.risk && t.risk.toLowerCase().includes(q))
-    );
-  });
-
-  const filteredPrs = recentPrs.filter((pr) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      (pr.prNumber && String(pr.prNumber).includes(q)) ||
-      (pr.branchName && pr.branchName.toLowerCase().includes(q)) ||
-      pr.reviewStatus.toLowerCase().includes(q) ||
-      (pr.task?.taskId && pr.task.taskId.toLowerCase().includes(q))
-    );
-  });
-
-
   return (
     <>
       <PageHeader
@@ -210,14 +173,6 @@ export default function DashboardPage() {
           </Button>
         }
       />
-
-      <Box sx={{ mb: 4 }}>
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search projects, recent tasks, or merge requests..."
-        />
-      </Box>
 
       {!loading && stats && (stats.awaitingApproval > 0 || stats.inProgress > 0) && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
@@ -327,15 +282,9 @@ export default function DashboardPage() {
                 Go to Projects
               </Button>
             </Box>
-          ) : filteredProjects.length === 0 ? (
-            <EmptyState
-              title="No Matching Projects"
-              description="We couldn't find any projects matching your search. Try a different query."
-              onClearSearch={() => setSearchQuery('')}
-            />
           ) : (
             <Grid container spacing={2}>
-              {filteredProjects.map((p) => (
+              {projects.map((p) => (
                 <Grid item xs={12} sm={6} md={4} key={p.id}>
                   <DashboardProjectBox project={p} />
                 </Grid>
@@ -361,15 +310,9 @@ export default function DashboardPage() {
                 <Typography color="text.secondary" variant="body2">
                   No tasks yet — go to Tasks and upload a CSV to start.
                 </Typography>
-              ) : filteredTasks.length === 0 ? (
-                <EmptyState
-                  title="No Matching Tasks"
-                  description="No recent tasks matched your search."
-                  onClearSearch={() => setSearchQuery('')}
-                />
               ) : (
                 <Stack spacing={0} divider={<Divider flexItem />}>
-                  {filteredTasks.map((task) => (
+                  {recentTasks.map((task) => (
                     <Box
                       key={task.id}
                       component={Link}
@@ -425,15 +368,9 @@ export default function DashboardPage() {
                 <Typography color="text.secondary" variant="body2">
                   No PRs yet — complete a task through validation to create one.
                 </Typography>
-              ) : filteredPrs.length === 0 ? (
-                <EmptyState
-                  title="No Matching Pull Requests"
-                  description="No merge requests matched your search query."
-                  onClearSearch={() => setSearchQuery('')}
-                />
               ) : (
                 <Stack spacing={0} divider={<Divider flexItem />}>
-                  {filteredPrs.map((pr) => (
+                  {recentPrs.map((pr) => (
                     <Box key={pr.id} sx={{ py: 1.5 }}>
                       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
                         <Box sx={{ minWidth: 0, flex: 1 }}>

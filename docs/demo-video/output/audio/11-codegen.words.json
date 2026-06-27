@@ -1,0 +1,122 @@
+{
+  "id": "11-codegen",
+  "narration": "Here is the generated diff for the rename. Every file change is visible on the Code Diff tab before we approve and ship.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\11-codegen.mp3",
+  "words": [
+    {
+      "text": "Here",
+      "offset": 0.102625,
+      "duration": 0.315791
+    },
+    {
+      "text": "is",
+      "offset": 0.510541,
+      "duration": 0.171041
+    },
+    {
+      "text": "the",
+      "offset": 0.681583,
+      "duration": 0.131583
+    },
+    {
+      "text": "generated",
+      "offset": 0.813166,
+      "duration": 0.671041
+    },
+    {
+      "text": "diff",
+      "offset": 1.484208,
+      "duration": 0.315791
+    },
+    {
+      "text": "for",
+      "offset": 1.813166,
+      "duration": 0.276291
+    },
+    {
+      "text": "the",
+      "offset": 2.089458,
+      "duration": 0.131583
+    },
+    {
+      "text": "rename",
+      "offset": 2.221041,
+      "duration": 0.5
+    },
+    {
+      "text": "Every",
+      "offset": 3.60525,
+      "duration": 0.35525
+    },
+    {
+      "text": "file",
+      "offset": 3.960541,
+      "duration": 0.394708
+    },
+    {
+      "text": "change",
+      "offset": 4.35525,
+      "duration": 0.447375
+    },
+    {
+      "text": "is",
+      "offset": 4.881583,
+      "duration": 0.197375
+    },
+    {
+      "text": "visible",
+      "offset": 5.078958,
+      "duration": 0.526333
+    },
+    {
+      "text": "on",
+      "offset": 5.671041,
+      "duration": 0.171041
+    },
+    {
+      "text": "the",
+      "offset": 5.842125,
+      "duration": 0.10525
+    },
+    {
+      "text": "Code",
+      "offset": 5.947375,
+      "duration": 0.368416
+    },
+    {
+      "text": "Diff",
+      "offset": 6.328958,
+      "duration": 0.276291
+    },
+    {
+      "text": "tab",
+      "offset": 6.60525,
+      "duration": 0.342125
+    },
+    {
+      "text": "before",
+      "offset": 6.960541,
+      "duration": 0.486833
+    },
+    {
+      "text": "we",
+      "offset": 7.447375,
+      "duration": 0.210541
+    },
+    {
+      "text": "approve",
+      "offset": 7.684208,
+      "duration": 0.513166
+    },
+    {
+      "text": "and",
+      "offset": 8.289458,
+      "duration": 0.276333
+    },
+    {
+      "text": "ship",
+      "offset": 8.565791,
+      "duration": 0.381583
+    }
+  ]
+}

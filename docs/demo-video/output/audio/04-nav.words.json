@@ -1,0 +1,117 @@
+{
+  "id": "04-nav",
+  "narration": "RepoPilot gives a complete SDLC view, from repository indexing to AI-generated code and GitLab merge requests. Navigation is on the left side.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\04-nav.mp3",
+  "words": [
+    {
+      "text": "RepoPilot",
+      "offset": 0.102625,
+      "duration": 0.736833
+    },
+    {
+      "text": "gives",
+      "offset": 0.865791,
+      "duration": 0.35525
+    },
+    {
+      "text": "a",
+      "offset": 1.3,
+      "duration": 0.078958
+    },
+    {
+      "text": "complete",
+      "offset": 1.378958,
+      "duration": 0.592125
+    },
+    {
+      "text": "SDLC",
+      "offset": 2.036833,
+      "duration": 0.75
+    },
+    {
+      "text": "view",
+      "offset": 2.786833,
+      "duration": 0.302625
+    },
+    {
+      "text": "from",
+      "offset": 3.431583,
+      "duration": 0.302625
+    },
+    {
+      "text": "repository",
+      "offset": 3.734208,
+      "duration": 0.697375
+    },
+    {
+      "text": "indexing",
+      "offset": 4.510541,
+      "duration": 0.592083
+    },
+    {
+      "text": "to",
+      "offset": 5.102625,
+      "duration": 0.14475
+    },
+    {
+      "text": "AI-generated",
+      "offset": 5.326333,
+      "duration": 0.868416
+    },
+    {
+      "text": "code",
+      "offset": 6.207875,
+      "duration": 0.381583
+    },
+    {
+      "text": "and",
+      "offset": 6.681583,
+      "duration": 0.276291
+    },
+    {
+      "text": "GitLab",
+      "offset": 6.957875,
+      "duration": 0.539458
+    },
+    {
+      "text": "merge",
+      "offset": 7.510541,
+      "duration": 0.407875
+    },
+    {
+      "text": "requests",
+      "offset": 7.984208,
+      "duration": 0.710541
+    },
+    {
+      "text": "Navigation",
+      "offset": 9.592125,
+      "duration": 0.763166
+    },
+    {
+      "text": "is",
+      "offset": 10.447375,
+      "duration": 0.197375
+    },
+    {
+      "text": "on",
+      "offset": 10.64475,
+      "duration": 0.131583
+    },
+    {
+      "text": "the",
+      "offset": 10.776333,
+      "duration": 0.131541
+    },
+    {
+      "text": "left",
+      "offset": 10.907875,
+      "duration": 0.35525
+    },
+    {
+      "text": "side",
+      "offset": 11.263166,
+      "duration": 0.486833
+    }
+  ]
+}

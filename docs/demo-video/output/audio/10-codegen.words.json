@@ -1,0 +1,122 @@
+{
+  "id": "10-codegen",
+  "narration": "The Code Generation Agent writes the actual code changes. You can review the diff file by file, and approve or reject before production.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\10-codegen.mp3",
+  "words": [
+    {
+      "text": "The",
+      "offset": 0.102625,
+      "duration": 0.10525
+    },
+    {
+      "text": "Code",
+      "offset": 0.207875,
+      "duration": 0.35525
+    },
+    {
+      "text": "Generation",
+      "offset": 0.576333,
+      "duration": 0.736833
+    },
+    {
+      "text": "Agent",
+      "offset": 1.418416,
+      "duration": 0.39475
+    },
+    {
+      "text": "writes",
+      "offset": 1.865791,
+      "duration": 0.407875
+    },
+    {
+      "text": "the",
+      "offset": 2.273666,
+      "duration": 0.184208
+    },
+    {
+      "text": "actual",
+      "offset": 2.457875,
+      "duration": 0.5
+    },
+    {
+      "text": "code",
+      "offset": 2.957875,
+      "duration": 0.328958
+    },
+    {
+      "text": "changes",
+      "offset": 3.313166,
+      "duration": 0.671041
+    },
+    {
+      "text": "You",
+      "offset": 4.907875,
+      "duration": 0.10525
+    },
+    {
+      "text": "can",
+      "offset": 5.065791,
+      "duration": 0.25
+    },
+    {
+      "text": "review",
+      "offset": 5.315791,
+      "duration": 0.39475
+    },
+    {
+      "text": "the",
+      "offset": 5.710541,
+      "duration": 0.118416
+    },
+    {
+      "text": "diff",
+      "offset": 5.842125,
+      "duration": 0.276291
+    },
+    {
+      "text": "file",
+      "offset": 6.118416,
+      "duration": 0.35525
+    },
+    {
+      "text": "by",
+      "offset": 6.473666,
+      "duration": 0.223666
+    },
+    {
+      "text": "file",
+      "offset": 6.697375,
+      "duration": 0.5
+    },
+    {
+      "text": "and",
+      "offset": 7.407875,
+      "duration": 0.210541
+    },
+    {
+      "text": "approve",
+      "offset": 7.618416,
+      "duration": 0.5
+    },
+    {
+      "text": "or",
+      "offset": 8.223666,
+      "duration": 0.223666
+    },
+    {
+      "text": "reject",
+      "offset": 8.447375,
+      "duration": 0.460541
+    },
+    {
+      "text": "before",
+      "offset": 8.947375,
+      "duration": 0.4605
+    },
+    {
+      "text": "production",
+      "offset": 9.407875,
+      "duration": 0.671041
+    }
+  ]
+}

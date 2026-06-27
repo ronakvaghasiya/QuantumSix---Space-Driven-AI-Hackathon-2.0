@@ -1,0 +1,137 @@
+{
+  "id": "08-upload-task",
+  "narration": "Now we create a live demo task. Task DT-0004 renames the label Sides Preview to Sides Preview 123. We upload it from CSV in one click.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\08-upload-task.mp3",
+  "words": [
+    {
+      "text": "Now",
+      "offset": 0.102625,
+      "duration": 0.263166
+    },
+    {
+      "text": "we",
+      "offset": 0.365791,
+      "duration": 0.236833
+    },
+    {
+      "text": "create",
+      "offset": 0.615791,
+      "duration": 0.486833
+    },
+    {
+      "text": "a",
+      "offset": 1.181583,
+      "duration": 0.092083
+    },
+    {
+      "text": "live",
+      "offset": 1.273666,
+      "duration": 0.421041
+    },
+    {
+      "text": "demo",
+      "offset": 1.69475,
+      "duration": 0.342083
+    },
+    {
+      "text": "task",
+      "offset": 2.036833,
+      "duration": 0.473666
+    },
+    {
+      "text": "Task",
+      "offset": 3.447375,
+      "duration": 0.381583
+    },
+    {
+      "text": "DT-0004",
+      "offset": 3.89475,
+      "duration": 2.276291
+    },
+    {
+      "text": "renames",
+      "offset": 6.171041,
+      "duration": 0.578958
+    },
+    {
+      "text": "the",
+      "offset": 6.75,
+      "duration": 0.184208
+    },
+    {
+      "text": "label",
+      "offset": 6.934208,
+      "duration": 0.473666
+    },
+    {
+      "text": "Sides",
+      "offset": 7.407875,
+      "duration": 0.486833
+    },
+    {
+      "text": "Preview",
+      "offset": 8.013166,
+      "duration": 0.407875
+    },
+    {
+      "text": "to",
+      "offset": 8.421041,
+      "duration": 0.131583
+    },
+    {
+      "text": "Sides",
+      "offset": 8.552625,
+      "duration": 0.526333
+    },
+    {
+      "text": "Preview",
+      "offset": 9.131583,
+      "duration": 0.381583
+    },
+    {
+      "text": "123",
+      "offset": 9.513166,
+      "duration": 1.14475
+    },
+    {
+      "text": "We",
+      "offset": 11.552625,
+      "duration": 0.157875
+    },
+    {
+      "text": "upload",
+      "offset": 11.763166,
+      "duration": 0.5
+    },
+    {
+      "text": "it",
+      "offset": 12.289458,
+      "duration": 0.157875
+    },
+    {
+      "text": "from",
+      "offset": 12.447375,
+      "duration": 0.35525
+    },
+    {
+      "text": "CSV",
+      "offset": 12.802625,
+      "duration": 0.75
+    },
+    {
+      "text": "in",
+      "offset": 13.64475,
+      "duration": 0.184208
+    },
+    {
+      "text": "one",
+      "offset": 13.828958,
+      "duration": 0.289458
+    },
+    {
+      "text": "click",
+      "offset": 14.157875,
+      "duration": 0.381583
+    }
+  ]
+}

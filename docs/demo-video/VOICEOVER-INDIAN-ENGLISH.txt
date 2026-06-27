@@ -1,0 +1,120 @@
+# RepoPilot AI — Voice-Over Script (Indian English)
+# Read at a calm, clear pace (~130 words per minute)
+# Total duration: approximately 3 minutes 25 seconds
+
+--- SCENE 1: LOGIN (start when login page is visible) ---
+
+Hello everyone. Welcome to RepoPilot AI —
+built by team QuantumSix for Hackathon 2.0.
+
+Our tagline is simple:
+One Prompt. Complete Feature Delivery.
+
+Let us sign in to the platform.
+Same login works on Windows and Ubuntu —
+no separate setup required.
+
+And we land on the main dashboard.
+
+--- SCENE 2: DASHBOARD ---
+
+Here you can see project count, active tasks,
+merge requests, and indexing status.
+
+RepoPilot gives a complete SDLC view —
+from repository indexing to AI code and GitLab MRs.
+
+Navigation is on the left —
+Dashboard, Projects, Tasks, Reports, Integrations.
+
+We also support light and dark mode —
+useful for long coding sessions.
+
+--- SCENE 3: PROJECTS & INDEXING ---
+
+Now let us connect a real GitLab repository.
+
+I will open our project — DesigntoolReact
+on the staging branch.
+
+RepoPilot clones the repo, parses all files,
+and builds a knowledge graph of the codebase.
+
+Indexing runs in the background.
+Embeddings go to Qdrant — progress is shown live.
+
+Once complete, the AI understands your project —
+components, services, imports, dependencies.
+
+We can explore the Knowledge Graph —
+a visual map of file connections.
+
+This helps the AI make smarter code generation decisions.
+
+--- SCENE 4: TASKS & PIPELINE ---
+
+Next — let us create an AI task.
+
+Upload tasks via CSV, or create one
+with a natural-language requirement.
+
+Each task runs an autonomous pipeline:
+Analysis, Code Generation, Validation, Merge Request.
+
+Let us open one task and see the pipeline.
+
+At the top — task ID, status, risk level,
+and linked project.
+
+The Requirement Agent analyses the task
+against indexed repository knowledge.
+
+It produces user stories, impacted files,
+and risk assessment — automatically.
+
+The Code Generation Agent writes actual changes —
+review the diff file by file.
+
+Human approval is built in —
+approve or reject before production.
+
+--- SCENE 5: VALIDATION & MR ---
+
+Validation runs ESLint, TypeScript, Prettier,
+and build verification.
+
+Results show pass, fail, and skipped —
+clear and transparent.
+
+The QA Agent generates Playwright test cases
+aligned with the requirement.
+
+Finally, RepoPilot creates a GitLab Merge Request —
+branch, commits, and MR link — ready for review.
+
+One prompt from the user.
+Complete feature delivery from the AI.
+
+--- SCENE 6: REPORTS & SETTINGS ---
+
+Reports gives team analytics —
+task breakdown, agent activity, QA summary.
+
+Managers track progress across all projects
+from one screen.
+
+Under Integrations — connect GitLab,
+and set OpenAI or Hugging Face as AI provider.
+
+API keys are stored securely.
+Each project can have its own AI settings.
+
+--- SCENE 7: CLOSING ---
+
+RepoPilot AI —
+One Prompt. Complete Feature Delivery.
+
+Built by QuantumSix —
+autonomous SDLC for modern engineering teams.
+
+Thank you for watching.

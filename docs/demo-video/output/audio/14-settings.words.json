@@ -1,0 +1,107 @@
+{
+  "id": "14-settings",
+  "narration": "Under Integrations, we connect GitLab and configure OpenAI or Hugging Face as the AI provider. API keys are stored securely.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\14-settings.mp3",
+  "words": [
+    {
+      "text": "Under",
+      "offset": 0.102625,
+      "duration": 0.342125
+    },
+    {
+      "text": "Integrations",
+      "offset": 0.536833,
+      "duration": 0.868416
+    },
+    {
+      "text": "we",
+      "offset": 1.69475,
+      "duration": 0.171041
+    },
+    {
+      "text": "connect",
+      "offset": 1.865791,
+      "duration": 0.421041
+    },
+    {
+      "text": "GitLab",
+      "offset": 2.339458,
+      "duration": 0.592125
+    },
+    {
+      "text": "and",
+      "offset": 3.102625,
+      "duration": 0.263166
+    },
+    {
+      "text": "configure",
+      "offset": 3.392125,
+      "duration": 0.60525
+    },
+    {
+      "text": "OpenAI",
+      "offset": 4.102625,
+      "duration": 0.618416
+    },
+    {
+      "text": "or",
+      "offset": 4.813166,
+      "duration": 0.223666
+    },
+    {
+      "text": "Hugging",
+      "offset": 5.036833,
+      "duration": 0.473666
+    },
+    {
+      "text": "Face",
+      "offset": 5.510541,
+      "duration": 0.460541
+    },
+    {
+      "text": "as",
+      "offset": 6.036833,
+      "duration": 0.276333
+    },
+    {
+      "text": "the",
+      "offset": 6.313166,
+      "duration": 0.184208
+    },
+    {
+      "text": "AI",
+      "offset": 6.576333,
+      "duration": 0.342083
+    },
+    {
+      "text": "provider",
+      "offset": 6.918416,
+      "duration": 0.671041
+    },
+    {
+      "text": "API",
+      "offset": 8.526333,
+      "duration": 0.526291
+    },
+    {
+      "text": "keys",
+      "offset": 9.052625,
+      "duration": 0.421041
+    },
+    {
+      "text": "are",
+      "offset": 9.539458,
+      "duration": 0.236833
+    },
+    {
+      "text": "stored",
+      "offset": 9.776333,
+      "duration": 0.421041
+    },
+    {
+      "text": "securely",
+      "offset": 10.197375,
+      "duration": 0.657875
+    }
+  ]
+}

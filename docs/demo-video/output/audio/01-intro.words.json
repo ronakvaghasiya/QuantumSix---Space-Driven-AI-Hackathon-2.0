@@ -1,0 +1,117 @@
+{
+  "id": "01-intro",
+  "narration": "Hello everyone. Welcome to RepoPilot AI, built by team QuantumSix for Hackathon 2.0. Our tagline is simple: One Prompt. Complete Feature Delivery.",
+  "mp3": "D:\\wamp\\www\\QuantumSix\\docs\\demo-video\\output\\audio\\01-intro.mp3",
+  "words": [
+    {
+      "text": "Hello",
+      "offset": 0.102625,
+      "duration": 0.315791
+    },
+    {
+      "text": "everyone",
+      "offset": 0.484208,
+      "duration": 0.657875
+    },
+    {
+      "text": "Welcome",
+      "offset": 2.078958,
+      "duration": 0.513166
+    },
+    {
+      "text": "to",
+      "offset": 2.592125,
+      "duration": 0.092083
+    },
+    {
+      "text": "RepoPilot",
+      "offset": 2.684208,
+      "duration": 0.710541
+    },
+    {
+      "text": "AI",
+      "offset": 3.473666,
+      "duration": 0.460541
+    },
+    {
+      "text": "built",
+      "offset": 4.25,
+      "duration": 0.342125
+    },
+    {
+      "text": "by",
+      "offset": 4.592125,
+      "duration": 0.25
+    },
+    {
+      "text": "team",
+      "offset": 4.868416,
+      "duration": 0.328958
+    },
+    {
+      "text": "QuantumSix",
+      "offset": 5.236833,
+      "duration": 0.763166
+    },
+    {
+      "text": "for",
+      "offset": 6.131583,
+      "duration": 0.25
+    },
+    {
+      "text": "Hackathon",
+      "offset": 6.381583,
+      "duration": 0.64475
+    },
+    {
+      "text": "2.0",
+      "offset": 7.026333,
+      "duration": 0.89475
+    },
+    {
+      "text": "Our",
+      "offset": 8.881583,
+      "duration": 0.197375
+    },
+    {
+      "text": "tagline",
+      "offset": 9.118416,
+      "duration": 0.60525
+    },
+    {
+      "text": "is",
+      "offset": 9.815791,
+      "duration": 0.25
+    },
+    {
+      "text": "simple",
+      "offset": 10.118416,
+      "duration": 0.592125
+    },
+    {
+      "text": "One",
+      "offset": 10.881583,
+      "duration": 0.328958
+    },
+    {
+      "text": "Prompt",
+      "offset": 11.210541,
+      "duration": 0.486833
+    },
+    {
+      "text": "Complete",
+      "offset": 12.64475,
+      "duration": 0.5
+    },
+    {
+      "text": "Feature",
+      "offset": 13.14475,
+      "duration": 0.526291
+    },
+    {
+      "text": "Delivery",
+      "offset": 13.671041,
+      "duration": 0.552625
+    }
+  ]
+}
