@@ -34,6 +34,8 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import FolderIcon from '@mui/icons-material/Folder';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import Link from 'next/link';
+import SearchInput from '@/components/common/SearchInput';
+import EmptyState from '@/components/common/EmptyState';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -67,6 +69,7 @@ function ValidationStatCard({
 
 export default function ReportsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -95,6 +98,21 @@ export default function ReportsPage() {
     colors: ['#919EAB', '#00B8D9', '#FFAB00', '#5119B7', '#8E33FF', '#22C55E', '#118D57', '#FF5630'],
     legend: { position: 'bottom' as const },
   };
+
+  const filteredTaskSummaries = (data?.taskSummaries || []).filter((row) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      row.taskId.toLowerCase().includes(q) ||
+      (row.projectName && row.projectName.toLowerCase().includes(q)) ||
+      row.status.toLowerCase().includes(q) ||
+      (row.assignedAgent && row.assignedAgent.toLowerCase().includes(q)) ||
+      (row.risk && row.risk.toLowerCase().includes(q)) ||
+      row.lintStatus.toLowerCase().includes(q) ||
+      row.prettierStatus.toLowerCase().includes(q) ||
+      row.buildStatus.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <>
@@ -326,6 +344,13 @@ export default function ReportsPage() {
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
             Click a task to see full analysis, tests, validation errors, and PR
           </Typography>
+          <Box sx={{ mb: 3 }}>
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search reports by task, project, status, risk, agent..."
+            />
+          </Box>
           {loading ? (
             <Skeleton height={200} />
           ) : (
@@ -347,54 +372,66 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(data?.taskSummaries || []).map((row) => (
-                    <TableRow
-                      key={row.id}
-                      hover
-                      component={Link}
-                      href={`/tasks/${row.id}`}
-                      sx={{ textDecoration: 'none', cursor: 'pointer' }}
-                    >
-                      <TableCell>
-                        <Typography variant="subtitle2">{row.taskId}</Typography>
-                      </TableCell>
-                      <TableCell>{row.projectName}</TableCell>
-                      <TableCell><StatusChip status={row.status} /></TableCell>
-                      <TableCell>
-                        <Typography variant="caption">{resolveAssignedAgentDisplay(row.assignedAgent, row.status)}</Typography>
-                      </TableCell>
-                      <TableCell><RiskChip risk={row.risk} /></TableCell>
-                      <TableCell>
-                        <Chip label={row.lintStatus.toUpperCase()} size="small" color={checkColor(row.lintStatus)} variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={row.prettierStatus.toUpperCase()} size="small" color={checkColor(row.prettierStatus)} variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={row.buildStatus.toUpperCase()} size="small" color={checkColor(row.buildStatus)} variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="caption" color="success.main">{row.testsPassed}P</Typography>
-                        {' / '}
-                        <Typography variant="caption" color="error.main" component="span">{row.testsFailed}F</Typography>
-                      </TableCell>
-                      <TableCell>{row.regressionCoverage}%</TableCell>
-                      <TableCell>
-                        {row.prUrl ? (
-                          <Chip
-                            label={row.prNumber ? `!${row.prNumber}` : 'MR'}
-                            size="small"
-                            color="primary"
-                            component="a"
-                            href={row.prUrl}
-                            target="_blank"
-                            clickable
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : '—'}
+                  {data?.taskSummaries && data.taskSummaries.length > 0 && filteredTaskSummaries.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} sx={{ py: 6 }}>
+                        <EmptyState
+                          title="No Matching Reports"
+                          description="No task detail reports matched your search query."
+                          onClearSearch={() => setSearchQuery('')}
+                        />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredTaskSummaries.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        hover
+                        component={Link}
+                        href={`/tasks/${row.id}`}
+                        sx={{ textDecoration: 'none', cursor: 'pointer' }}
+                      >
+                        <TableCell>
+                          <Typography variant="subtitle2">{row.taskId}</Typography>
+                        </TableCell>
+                        <TableCell>{row.projectName}</TableCell>
+                        <TableCell><StatusChip status={row.status} /></TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{resolveAssignedAgentDisplay(row.assignedAgent, row.status)}</Typography>
+                        </TableCell>
+                        <TableCell><RiskChip risk={row.risk} /></TableCell>
+                        <TableCell>
+                          <Chip label={row.lintStatus.toUpperCase()} size="small" color={checkColor(row.lintStatus)} variant="outlined" />
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={row.prettierStatus.toUpperCase()} size="small" color={checkColor(row.prettierStatus)} variant="outlined" />
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={row.buildStatus.toUpperCase()} size="small" color={checkColor(row.buildStatus)} variant="outlined" />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption" color="success.main">{row.testsPassed}P</Typography>
+                          {' / '}
+                          <Typography variant="caption" color="error.main" component="span">{row.testsFailed}F</Typography>
+                        </TableCell>
+                        <TableCell>{row.regressionCoverage}%</TableCell>
+                        <TableCell>
+                          {row.prUrl ? (
+                            <Chip
+                              label={row.prNumber ? `!${row.prNumber}` : 'MR'}
+                              size="small"
+                              color="primary"
+                              component="a"
+                              href={row.prUrl}
+                              target="_blank"
+                              clickable
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                   {!data?.taskSummaries.length && (
                     <TableRow>
                       <TableCell colSpan={11}>

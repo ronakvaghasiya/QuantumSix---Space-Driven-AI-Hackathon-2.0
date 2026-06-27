@@ -27,6 +27,7 @@ import {
   LinearProgress,
   Alert,
   Typography,
+  Box,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -36,6 +37,8 @@ import { PageHeader } from '@/components/common/KpiCard';
 import { api, Project, CreateProjectInput, GitLabRepo, GitLabBranch } from '@/lib/api';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import SearchInput from '@/components/common/SearchInput';
+import EmptyState from '@/components/common/EmptyState';
 
 const FRAMEWORKS = ['Next.js', 'React', 'Vue', 'Angular', 'NestJS', 'Express', 'Other'];
 const LANGUAGES = ['TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Other'];
@@ -43,6 +46,7 @@ const STEPS = ['Project Info', 'Select Repository', 'Select Branch', 'Review'];
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(0);
@@ -156,6 +160,29 @@ export default function ProjectsPage() {
   );
   const unconnectedRepos = availableRepos.filter((r) => !connectedRepoIds.has(String(r.id)));
 
+  const filteredProjects = projects.filter((p) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.framework && p.framework.toLowerCase().includes(q)) ||
+      (p.language && p.language.toLowerCase().includes(q)) ||
+      (p.repositoryUrl && p.repositoryUrl.toLowerCase().includes(q)) ||
+      (p.githubOwner && p.githubOwner.toLowerCase().includes(q)) ||
+      (p.githubRepoName && p.githubRepoName.toLowerCase().includes(q))
+    );
+  });
+
+  const filteredUnconnectedRepos = unconnectedRepos.filter((r) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      r.name.toLowerCase().includes(q) ||
+      (r.fullName && r.fullName.toLowerCase().includes(q)) ||
+      (r.description && r.description.toLowerCase().includes(q))
+    );
+  });
+
   const connectAndIndex = async (repo: GitLabRepo, branch?: string) => {
     setConnectingRepoId(repo.id);
     try {
@@ -244,6 +271,14 @@ export default function ProjectsPage() {
         </Alert>
       )}
 
+      <Box sx={{ mb: 3 }}>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search projects by name, repository, language..."
+        />
+      </Box>
+
       <Card>
         <TableContainer>
           <Table>
@@ -279,7 +314,18 @@ export default function ProjectsPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {unconnectedRepos.map((repo) => (
+                  {searchQuery && (projects.length > 0 || unconnectedRepos.length > 0) && filteredProjects.length === 0 && filteredUnconnectedRepos.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ py: 6 }}>
+                        <EmptyState
+                          title="No Matching Repositories"
+                          description="No projects or GitLab repositories match your search query."
+                          onClearSearch={() => setSearchQuery('')}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredUnconnectedRepos.map((repo) => (
                     <TableRow key={`gitlab-${repo.id}`} sx={{ bgcolor: 'action.hover' }}>
                       <TableCell><strong>{repo.name}</strong></TableCell>
                       <TableCell>{repo.fullName}</TableCell>
@@ -313,7 +359,7 @@ export default function ProjectsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {projects.map((p) => (
+                  {filteredProjects.map((p) => (
                     <TableRow key={p.id} hover>
                       <TableCell><strong>{p.name}</strong></TableCell>
                       <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
