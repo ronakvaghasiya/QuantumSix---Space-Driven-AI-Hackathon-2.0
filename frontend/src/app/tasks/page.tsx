@@ -21,6 +21,7 @@ import {
   Stack,
   Skeleton,
   Alert,
+  Box,
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -31,10 +32,13 @@ import { StatusChip, RiskChip } from '@/components/common/StatusChip';
 import { api, Task, Project } from '@/lib/api';
 import { formatDate, resolveAssignedAgentDisplay } from '@/lib/utils';
 import Link from 'next/link';
+import SearchInput from '@/components/common/SearchInput';
+import EmptyState from '@/components/common/EmptyState';
 
 export default function TasksPage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -109,6 +113,19 @@ export default function TasksPage() {
     }
   };
 
+  const filteredTasks = tasks.filter((t) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      t.taskId.toLowerCase().includes(q) ||
+      (t.project?.name && t.project.name.toLowerCase().includes(q)) ||
+      t.status.toLowerCase().includes(q) ||
+      (t.risk && t.risk.toLowerCase().includes(q)) ||
+      (t.assignedAgent && t.assignedAgent.toLowerCase().includes(q)) ||
+      (t.requirement && t.requirement.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <>
       <PageHeader
@@ -143,6 +160,14 @@ export default function TasksPage() {
         </Alert>
       )}
 
+      <Box sx={{ mb: 3 }}>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search tasks by ID, requirement, project, agent, status..."
+        />
+      </Box>
+
       <Card>
         <TableContainer>
           <Table>
@@ -172,8 +197,18 @@ export default function TasksPage() {
                     No tasks yet. Upload a CSV to create tasks.
                   </TableCell>
                 </TableRow>
+              ) : filteredTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ py: 6 }}>
+                    <EmptyState
+                      title="No Matching Tasks"
+                      description="No tasks matched your search query."
+                      onClearSearch={() => setSearchQuery('')}
+                    />
+                  </TableCell>
+                </TableRow>
               ) : (
-                tasks.map((task) => (
+                filteredTasks.map((task) => (
                   <TableRow key={task.id} hover>
                     <TableCell><strong>{task.taskId}</strong></TableCell>
                     <TableCell>{task.project?.name || '—'}</TableCell>
